@@ -39,11 +39,17 @@ class NeakasaRecentActivitySensor(NeakasaDeviceEntity, SensorEntity):
         cat_names = {cat.id: cat.name for cat in snap.cats}
         events: list[dict[str, object]] = []
         for record in snap.recent_records:
-            kind = "cat_visit" if record.record_type == RecordType.CAT_VISIT else "cleaning"
+            kind = (
+                "cat_visit"
+                if record.record_type == RecordType.CAT_VISIT
+                else "cleaning"
+            )
             event: dict[str, object] = {
                 "id": record.record_id,
                 "type": kind,
-                "timestamp": datetime.fromtimestamp(record.start_time, tz=UTC).isoformat(),
+                "timestamp": datetime.fromtimestamp(
+                    record.start_time, tz=UTC
+                ).isoformat(),
                 "duration_seconds": max(0, record.duration_seconds),
             }
             if kind == "cat_visit":
