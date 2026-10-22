@@ -60,7 +60,9 @@ class NeakasaPushClient:
         self._stream: StatusStream | None = None
         self._supervisor: asyncio.Task[None] | None = None
         self._stopping: bool = False
-        self._leveling_store: Store = Store(hass, 1, f"neakasa_litterbox.leveling.{entry.entry_id}")
+        self._leveling_store: Store = Store(
+            hass, 1, f"neakasa_litterbox.leveling.{entry.entry_id}"
+        )
 
     async def async_restore_leveling_events(self) -> None:
         """Restore completed leveling events between Home Assistant restarts."""
@@ -197,8 +199,12 @@ class NeakasaPushClient:
         if not patch:
             return
         old_operating = str(target.status.operating_state).lower()
-        new_operating = str(patch.get("operating_state", target.status.operating_state)).lower()
-        if old_operating.endswith("leveling") and not new_operating.endswith("leveling"):
+        new_operating = str(
+            patch.get("operating_state", target.status.operating_state)
+        ).lower()
+        if old_operating.endswith("leveling") and not new_operating.endswith(
+            "leveling"
+        ):
             device_id = target.device["iot_id"]
             now = int(time.time())
             previous = self._coordinator.leveling_events.get(device_id, [])
