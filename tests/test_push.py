@@ -167,9 +167,7 @@ async def test_leveling_completion_is_added_once(push_setup, hass):
     push, _, _, coordinator, snap, _ = push_setup
     leveling_status = replace(snap.status, operating_state="leveling")
     leveling_snap = replace(snap, status=leveling_status)
-    coordinator.data = NeakasaPayload(
-        devices={snap.device["iot_id"]: leveling_snap}
-    )
+    coordinator.data = NeakasaPayload(devices={snap.device["iot_id"]: leveling_snap})
     with patch.object(push._leveling_store, "async_save", new_callable=AsyncMock):
         push._handle_change(
             StatusUpdate(
