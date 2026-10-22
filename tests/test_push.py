@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from neakasa_litterbox_sdk import NeakasaError, StatusUpdate
+from neakasa_litterbox_sdk import NeakasaError, OperatingState, StatusUpdate
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.neakasa_litterbox.const import DOMAIN
@@ -165,14 +165,14 @@ async def test_leveling_completion_is_added_once(push_setup, hass):
     from unittest.mock import patch
 
     push, _, _, coordinator, snap, _ = push_setup
-    leveling_status = replace(snap.status, operating_state="leveling")
+    leveling_status = replace(snap.status, operating_state=OperatingState.LEVELING)
     leveling_snap = replace(snap, status=leveling_status)
     coordinator.data = NeakasaPayload(devices={snap.device["iot_id"]: leveling_snap})
     with patch.object(push._leveling_store, "async_save", new_callable=AsyncMock):
         push._handle_change(
             StatusUpdate(
                 device_name=snap.device["device_name"],
-                changes={"operating_state": "idle"},
+                changes={"operating_state": OperatingState.IDLE},
             )
         )
         await hass.async_block_till_done()
