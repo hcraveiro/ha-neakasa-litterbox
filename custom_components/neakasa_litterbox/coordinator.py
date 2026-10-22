@@ -234,7 +234,8 @@ def _build_snapshot(
                 (
                     record
                     for record in unique_records
-                    if record.record_type in (RecordType.CAT_VISIT, RecordType.CLEAN_CYCLE)
+                    if record.record_type
+                    in (RecordType.CAT_VISIT, RecordType.CLEAN_CYCLE)
                 ),
                 key=lambda record: (record.start_time, record.record_id),
                 reverse=True,
