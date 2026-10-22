@@ -9,6 +9,8 @@ from homeassistant.core import callback
 from .cat_last_visit import NeakasaCatLastVisitSensor
 from .cat_visits_today import NeakasaCatVisitsTodaySensor
 from .cat_weight import NeakasaCatWeightSensor
+from .cat_stay_today import NeakasaCatStayTodaySensor
+from .recent_activity import NeakasaRecentActivitySensor
 from .last_visit import NeakasaLastVisitSensor
 from .operating_state import NeakasaOperatingStateSensor
 from .sand_percent import NeakasaSandPercentSensor
@@ -29,6 +31,8 @@ __all__ = [
     "NeakasaCatLastVisitSensor",
     "NeakasaCatVisitsTodaySensor",
     "NeakasaCatWeightSensor",
+    "NeakasaCatStayTodaySensor",
+    "NeakasaRecentActivitySensor",
     "NeakasaLastVisitSensor",
     "NeakasaOperatingStateSensor",
     "NeakasaSandPercentSensor",
@@ -46,6 +50,7 @@ def _device_sensors(
         NeakasaOperatingStateSensor(coordinator, iot_id),
         NeakasaVisitsTodaySensor(coordinator, iot_id),
         NeakasaLastVisitSensor(coordinator, iot_id),
+        NeakasaRecentActivitySensor(coordinator, iot_id),
     ]
 
 
@@ -59,6 +64,7 @@ def _cat_sensors(
         NeakasaCatWeightSensor(coordinator, iot_id, cat_id),
         NeakasaCatLastVisitSensor(coordinator, iot_id, cat_id),
         NeakasaCatVisitsTodaySensor(coordinator, iot_id, cat_id),
+        NeakasaCatStayTodaySensor(coordinator, iot_id, cat_id),
     ]
 
 
