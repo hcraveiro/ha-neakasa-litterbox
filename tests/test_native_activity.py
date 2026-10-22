@@ -158,7 +158,8 @@ def test_recent_activity_merges_leveling_and_cleanup_completion(
     ):
         events = sensor.extra_state_attributes["events"]
         assert [event["type"] for event in events] == ["leveling", "cleaning"]
-        assert events[1]["completed_at"] == datetime.fromtimestamp(
-            clean.end_time, tz=UTC
-        ).isoformat()
+        assert (
+            events[1]["completed_at"]
+            == datetime.fromtimestamp(clean.end_time, tz=UTC).isoformat()
+        )
         assert sensor.native_value == datetime.fromtimestamp(started + 180, tz=UTC)
