@@ -131,3 +131,34 @@ def test_stay_today_sensor_reads_native_aggregate(
     coordinator.data = payload
     sensor = NeakasaCatStayTodaySensor(coordinator, sample_device.iot_id, sample_cat.id)
     assert sensor.native_value == 31
+
+
+def test_recent_activity_merges_leveling_and_cleanup_completion(
+    sample_device, sample_status, sample_cat, monkeypatch
+):
+    from dataclasses import replace
+    from unittest.mock import patch
+
+    from homeassistant.util import dt as dt_util
+
+    now = datetime(2026, 10, 22, 12, tzinfo=UTC)
+    monkeypatch.setattr(dt_util, "utcnow", lambda: now)
+    monkeypatch.setattr(
+        dt_util, "start_of_local_day", lambda: datetime(2026, 10, 22, tzinfo=UTC)
+    )
+    started = int(now.timestamp()) - 200
+    clean = _record(99, RecordType.CLEAN_CYCLE, 0, started, started + 120)
+    snap = _build_snapshot(sample_device, sample_status, [sample_cat], [clean])
+    snap = replace(snap, leveling_events=(started + 180,))
+    sensor = object.__new__(NeakasaRecentActivitySensor)
+    with patch.object(
+        NeakasaRecentActivitySensor,
+        "snapshot",
+        property(lambda _self: snap),
+    ):
+        events = sensor.extra_state_attributes["events"]
+        assert [event["type"] for event in events] == ["leveling", "cleaning"]
+        assert events[1]["completed_at"] == datetime.fromtimestamp(
+            clean.end_time, tz=UTC
+        ).isoformat()
+        assert sensor.native_value == datetime.fromtimestamp(started + 180, tz=UTC)
