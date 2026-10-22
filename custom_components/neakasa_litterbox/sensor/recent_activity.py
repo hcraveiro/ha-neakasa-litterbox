@@ -67,19 +67,19 @@ class NeakasaRecentActivitySensor(NeakasaDeviceEntity, SensorEntity):
                     event["weight"] = record.weight
                     event["weight_unit"] = record.unit or "kg"
             events.append(event)
-        for timestamp in snap.leveling_events:
-            events.append(
-                {
-                    "id": f"leveling-{timestamp}",
-                    "type": "leveling",
-                    "timestamp": datetime.fromtimestamp(
-                        timestamp, tz=UTC
-                    ).isoformat(),
-                    "completed_at": datetime.fromtimestamp(
-                        timestamp, tz=UTC
-                    ).isoformat(),
-                    "duration_seconds": 0,
-                }
-            )
+        events.extend(
+            {
+                "id": f"leveling-{timestamp}",
+                "type": "leveling",
+                "timestamp": datetime.fromtimestamp(
+                    timestamp, tz=UTC
+                ).isoformat(),
+                "completed_at": datetime.fromtimestamp(
+                    timestamp, tz=UTC
+                ).isoformat(),
+                "duration_seconds": 0,
+            }
+            for timestamp in snap.leveling_events
+        )
         events.sort(key=lambda event: str(event["timestamp"]), reverse=True)
         return {"events": events[:30]}
