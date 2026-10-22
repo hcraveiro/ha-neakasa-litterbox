@@ -7,7 +7,9 @@ from datetime import UTC, datetime
 from neakasa_litterbox_sdk import RecordType, ToiletRecord
 
 from custom_components.neakasa_litterbox.coordinator import _build_snapshot
-from custom_components.neakasa_litterbox.sensor.cat_stay_today import NeakasaCatStayTodaySensor
+from custom_components.neakasa_litterbox.sensor.cat_stay_today import (
+    NeakasaCatStayTodaySensor,
+)
 from custom_components.neakasa_litterbox.sensor.recent_activity import (
     NeakasaRecentActivitySensor,
 )
@@ -37,7 +39,9 @@ def test_native_activity_includes_clean_and_cat_records_without_duplicates(
         dt_util, "start_of_local_day", lambda: datetime(2026, 10, 22, tzinfo=UTC)
     )
     start = int(fake_now.timestamp()) - 1800
-    visit = _record(1, RecordType.CAT_VISIT, sample_cat.id, start, start + 45, 4.1, "kg")
+    visit = _record(
+        1, RecordType.CAT_VISIT, sample_cat.id, start, start + 45, 4.1, "kg"
+    )
     clean = _record(2, RecordType.CLEAN_CYCLE, 0, start + 60, start + 200)
     snap = _build_snapshot(
         sample_device, sample_status, [sample_cat], [visit, clean, visit]
@@ -59,40 +63,48 @@ def test_stay_today_clips_visit_crossing_midnight(
     monkeypatch.setattr(
         dt_util, "start_of_local_day", lambda: datetime.fromtimestamp(midnight, tz=UTC)
     )
-    visit = _record(3, RecordType.CAT_VISIT, sample_cat.id, midnight - 50, midnight + 20)
+    visit = _record(
+        3, RecordType.CAT_VISIT, sample_cat.id, midnight - 50, midnight + 20
+    )
     snap = _build_snapshot(sample_device, sample_status, [sample_cat], [visit])
     assert snap.cat_stats[sample_cat.id]["stay_today_seconds"] == 20
     assert snap.cat_stats[sample_cat.id]["visits_today"] == 0
 
 
+
 def test_recent_activity_sensor_schema(
     sample_device, sample_status, sample_cat, monkeypatch
 ):
+    from unittest.mock import patch
+
     from homeassistant.util import dt as dt_util
 
-    fake_now = datetime(2026, 10, 22, 12, 0, tzinfo=UTC)
-    monkeypatch.setattr(dt_util, "utcnow", lambda: fake_now)
+    now = datetime(2026, 10, 22, 12, tzinfo=UTC)
+    monkeypatch.setattr(dt_util, "utcnow", lambda: now)
     monkeypatch.setattr(
         dt_util, "start_of_local_day", lambda: datetime(2026, 10, 22, tzinfo=UTC)
     )
-    start = int(fake_now.timestamp()) - 100
-    visit = _record(11, RecordType.CAT_VISIT, sample_cat.id, start, start + 45, 4.1, "kg")
+    start = int(now.timestamp()) - 100
+    visit = _record(
+        11, RecordType.CAT_VISIT, sample_cat.id, start, start + 45, 4.1, "kg"
+    )
     clean = _record(12, RecordType.CLEAN_CYCLE, 0, start + 50, start + 80)
     snap = _build_snapshot(sample_device, sample_status, [sample_cat], [visit, clean])
     sensor = object.__new__(NeakasaRecentActivitySensor)
-    sensor.__dict__["_attr_name"] = "Recent activity"
-    sensor.__dict__["_test_snapshot"] = snap
-    # Use the shared sensor property's getter independently of HA entity setup.
-    from unittest.mock import patch
-
-    with patch.object(NeakasaRecentActivitySensor, "snapshot", new_callable=lambda: property(lambda self: self.__dict__["_test_snapshot"])):
+    with patch.object(
+        NeakasaRecentActivitySensor,
+        "snapshot",
+        property(lambda _self: snap),
+    ):
         events = sensor.extra_state_attributes["events"]
         assert len(events) == 2
         assert events[0]["type"] == "cleaning"
         assert events[1]["cat"] == sample_cat.name
         assert events[1]["duration_seconds"] == 45
         assert events[1]["weight_unit"] == "kg"
-        assert sensor.native_value == datetime.fromtimestamp(clean.start_time, tz=UTC)
+        assert sensor.native_value == datetime.fromtimestamp(
+            clean.start_time, tz=UTC
+        )
 
 
 def test_native_snapshot_no_records(sample_device, sample_status, sample_cat):
@@ -100,34 +112,42 @@ def test_native_snapshot_no_records(sample_device, sample_status, sample_cat):
     assert snap.recent_records == ()
     assert snap.cat_stats[sample_cat.id]["stay_today_seconds"] == 0
 
+
 def test_stay_today_sensor_reads_native_aggregate(
     sample_device, sample_status, sample_cat, monkeypatch
 ):
+    from types import SimpleNamespace
     from unittest.mock import patch
+
     from homeassistant.util import dt as dt_util
 
-    fake_now = datetime(2026, 10, 22, 12, 0, tzinfo=UTC)
-    monkeypatch.setattr(dt_util, "utcnow", lambda: fake_now)
+    from custom_components.neakasa_litterbox.data import NeakasaPayload
+
+    now = datetime(2026, 10, 22, 12, tzinfo=UTC)
+    monkeypatch.setattr(dt_util, "utcnow", lambda: now)
     monkeypatch.setattr(
         dt_util, "start_of_local_day", lambda: datetime(2026, 10, 22, tzinfo=UTC)
     )
-    start = int(fake_now.timestamp()) - 100
+    start = int(now.timestamp()) - 100
     visit = _record(21, RecordType.CAT_VISIT, sample_cat.id, start, start + 31)
     snap = _build_snapshot(sample_device, sample_status, [sample_cat], [visit])
+    payload = NeakasaPayload(devices={sample_device.iot_id: snap})
     sensor = object.__new__(NeakasaCatStayTodaySensor)
-    with patch.object(
-        NeakasaCatStayTodaySensor,
-        "coordinator",
-        new_callable=lambda: property(
-            lambda self: type("Coordinator", (), {"data": NeakasaPayload(devices={sample_device.iot_id: snap})})()
+    with (
+        patch.object(
+            NeakasaCatStayTodaySensor,
+            "coordinator",
+            property(lambda _self: SimpleNamespace(data=payload)),
         ),
-    ), patch.object(
-        NeakasaCatStayTodaySensor,
-        "iot_id",
-        new_callable=lambda: property(lambda self: sample_device.iot_id),
-    ), patch.object(
-        NeakasaCatStayTodaySensor,
-        "cat_id",
-        new_callable=lambda: property(lambda self: sample_cat.id),
+        patch.object(
+            NeakasaCatStayTodaySensor,
+            "iot_id",
+            property(lambda _self: sample_device.iot_id),
+        ),
+        patch.object(
+            NeakasaCatStayTodaySensor,
+            "cat_id",
+            property(lambda _self: sample_cat.id),
+        ),
     ):
         assert sensor.native_value == 31
