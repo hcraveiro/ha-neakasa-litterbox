@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import time
 from typing import TYPE_CHECKING
 
+from homeassistant.helpers.storage import Store
 from neakasa_litterbox_sdk import DeviceStatus
 
 from .const import LOGGER
@@ -58,6 +60,24 @@ class NeakasaPushClient:
         self._stream: StatusStream | None = None
         self._supervisor: asyncio.Task[None] | None = None
         self._stopping: bool = False
+        self._leveling_store: Store[dict[str, list[int]]] = Store(
+            hass, 1, f"neakasa_litterbox.leveling.{entry.entry_id}"
+        )
+
+    async def async_restore_leveling_events(self) -> None:
+        """Restore completed leveling events between Home Assistant restarts."""
+        saved = await self._leveling_store.async_load()
+        if not isinstance(saved, dict):
+            return
+        now = int(time.time())
+        for device_id, timestamps in saved.items():
+            if isinstance(timestamps, list):
+                self._coordinator.leveling_events[str(device_id)] = [
+                    timestamp
+                    for timestamp in timestamps
+                    if isinstance(timestamp, int)
+                    and now - 7 * 86400 <= timestamp <= now
+                ][-30:]
 
     async def async_start(self) -> None:
         """Open the MQTT stream and start the reconnect supervisor."""
@@ -178,9 +198,32 @@ class NeakasaPushClient:
         }
         if not patch:
             return
+        old_operating = str(target.status.operating_state).lower()
+        new_operating = str(
+            patch.get("operating_state", target.status.operating_state)
+        ).lower()
+        if old_operating.endswith("leveling") and not new_operating.endswith(
+            "leveling"
+        ):
+            device_id = target.device["iot_id"]
+            now = int(time.time())
+            previous = self._coordinator.leveling_events.get(device_id, [])
+            self._coordinator.leveling_events[device_id] = [
+                *[ts for ts in previous if now - ts <= 7 * 86400],
+                now,
+            ][-30:]
+            self._hass.async_create_task(
+                self._leveling_store.async_save(self._coordinator.leveling_events)
+            )
         # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
         new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
-        new_snapshot = dataclasses.replace(target, status=new_status)
+        new_snapshot = dataclasses.replace(
+            target,
+            status=new_status,
+            leveling_events=tuple(
+                self._coordinator.leveling_events.get(target.device["iot_id"], [])
+            ),
+        )
         new_payload = NeakasaPayload(
             devices={
                 **payload.devices,

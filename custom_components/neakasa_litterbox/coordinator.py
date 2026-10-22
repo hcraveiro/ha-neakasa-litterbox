@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
@@ -59,6 +60,7 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
         scan_interval: timedelta,
     ) -> None:
         """Initialize."""
+        self.leveling_events: dict[str, list[int]] = {}
         super().__init__(
             hass=hass,
             logger=LOGGER,
@@ -136,7 +138,15 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
             except NeakasaApiClientError as exc:
                 raise UpdateFailed(str(exc)) from exc
             return NeakasaPayload(
-                devices={snap.device["iot_id"]: snap for snap in snapshots},
+                devices={
+                    snap.device["iot_id"]: dataclasses.replace(
+                        snap,
+                        leveling_events=tuple(
+                            self.leveling_events.get(snap.device["iot_id"], [])
+                        ),
+                    )
+                    for snap in snapshots
+                },
             )
 
     async def _async_sign_in_again(self) -> None:

@@ -6,7 +6,7 @@ on:
       version:
         description: 'Beta version (must match integration manifest)'
         required: true
-        default: '1.4.4b1'
+        default: '1.4.4b2'
 
 permissions:
   contents: write
@@ -34,7 +34,9 @@ jobs:
           assert version == manifest["version"], (
               f"Requested {version} but manifest declares {manifest['version']}"
           )
-          assert version.endswith("b1"), "This workflow is limited to beta b1."
+          assert "b" in version and version.rsplit("b", 1)[1].isdigit(), (
+              "This workflow only publishes beta versions."
+          )
           PY
           cd custom_components/neakasa_litterbox
           zip -r ../../neakasa_litterbox.zip .

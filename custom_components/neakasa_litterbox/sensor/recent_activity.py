@@ -26,9 +26,14 @@ class NeakasaRecentActivitySensor(NeakasaDeviceEntity, SensorEntity):
     def native_value(self) -> datetime | None:
         """Return the most recent recorded event timestamp."""
         snap = self.snapshot
-        if snap is None or not snap.recent_records:
+        if snap is None:
             return None
-        return datetime.fromtimestamp(snap.recent_records[0].start_time, tz=UTC)
+        latest = max(
+            (record.start_time for record in snap.recent_records),
+            default=0,
+        )
+        latest = max(latest, max(snap.leveling_events, default=0))
+        return datetime.fromtimestamp(latest, tz=UTC) if latest else None
 
     @property
     def extra_state_attributes(self) -> dict[str, list[dict[str, object]]]:
@@ -62,4 +67,15 @@ class NeakasaRecentActivitySensor(NeakasaDeviceEntity, SensorEntity):
                     event["weight"] = record.weight
                     event["weight_unit"] = record.unit or "kg"
             events.append(event)
-        return {"events": events}
+        events.extend(
+            {
+                "id": f"leveling-{timestamp}",
+                "type": "leveling",
+                "timestamp": datetime.fromtimestamp(timestamp, tz=UTC).isoformat(),
+                "completed_at": datetime.fromtimestamp(timestamp, tz=UTC).isoformat(),
+                "duration_seconds": 0,
+            }
+            for timestamp in snap.leveling_events
+        )
+        events.sort(key=lambda event: str(event["timestamp"]), reverse=True)
+        return {"events": events[:30]}

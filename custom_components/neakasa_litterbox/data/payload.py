@@ -43,6 +43,7 @@ class NeakasaDeviceSnapshot:
     last_clean_at: int | None = None
     cat_stats: Mapping[int, NeakasaCatStats] = field(default_factory=dict)
     recent_records: tuple[ToiletRecord, ...] = ()
+    leveling_events: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
