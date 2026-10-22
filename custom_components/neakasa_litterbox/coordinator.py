@@ -137,6 +137,19 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
                 continue
             except NeakasaApiClientError as exc:
                 raise UpdateFailed(str(exc)) from exc
+            for snap in snapshots:
+                current = (self.data.devices.get(snap.device["iot_id"])
+                           if self.data is not None else None)
+                if (
+                    current is not None
+                    and current.status.operating_state != snap.status.operating_state
+                ):
+                    LOGGER.info(
+                        "Neakasa cloud poll state for %s: %s -> %s",
+                        snap.device["device_name"],
+                        current.status.operating_state,
+                        snap.status.operating_state,
+                    )
             return NeakasaPayload(
                 devices={
                     snap.device["iot_id"]: dataclasses.replace(
