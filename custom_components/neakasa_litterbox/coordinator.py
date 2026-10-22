@@ -138,8 +138,11 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
             except NeakasaApiClientError as exc:
                 raise UpdateFailed(str(exc)) from exc
             for snap in snapshots:
-                current = (self.data.devices.get(snap.device["iot_id"])
-                           if self.data is not None else None)
+                current = (
+                    self.data.devices.get(snap.device["iot_id"])
+                    if self.data is not None
+                    else None
+                )
                 if (
                     current is not None
                     and current.status.operating_state != snap.status.operating_state
