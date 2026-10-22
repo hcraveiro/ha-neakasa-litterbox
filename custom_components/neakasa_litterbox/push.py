@@ -60,7 +60,7 @@ class NeakasaPushClient:
         self._stream: StatusStream | None = None
         self._supervisor: asyncio.Task[None] | None = None
         self._stopping: bool = False
-        self._leveling_store: Store = Store(
+        self._leveling_store: Store[dict[str, list[int]]] = Store(
             hass, 1, f"neakasa_litterbox.leveling.{entry.entry_id}"
         )
 
