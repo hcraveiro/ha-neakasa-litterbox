@@ -198,6 +198,7 @@ def _build_snapshot(
             last_visit_weight=latest.weight if latest is not None else None,
             last_visit_weight_unit=latest.unit if latest is not None else None,
             visits_today=len(todays),
+            stay_today_seconds=sum(max(0, r.duration_seconds) for r in todays),
         )
 
     info: NeakasaDeviceInfo = {
@@ -217,6 +218,11 @@ def _build_snapshot(
         last_visit_at=last_visit_at,
         last_clean_at=last_clean_at,
         cat_stats=cat_stats,
+        recent_records=tuple(sorted(
+            (record for record in records if record.record_type in (RecordType.CAT_VISIT, RecordType.CLEAN_CYCLE)),
+            key=lambda record: (record.start_time, record.record_id),
+            reverse=True,
+        )[:30]),
     )
 
 
