@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from neakasa_litterbox_sdk import RecordType, ToiletRecord
 
 from custom_components.neakasa_litterbox.coordinator import _build_snapshot
+from custom_components.neakasa_litterbox.sensor.cat_stay_today import NeakasaCatStayTodaySensor
 from custom_components.neakasa_litterbox.sensor.recent_activity import (
     NeakasaRecentActivitySensor,
 )
@@ -98,3 +99,35 @@ def test_native_snapshot_no_records(sample_device, sample_status, sample_cat):
     snap = _build_snapshot(sample_device, sample_status, [sample_cat], [])
     assert snap.recent_records == ()
     assert snap.cat_stats[sample_cat.id]["stay_today_seconds"] == 0
+
+def test_stay_today_sensor_reads_native_aggregate(
+    sample_device, sample_status, sample_cat, monkeypatch
+):
+    from unittest.mock import patch
+    from homeassistant.util import dt as dt_util
+
+    fake_now = datetime(2026, 10, 22, 12, 0, tzinfo=UTC)
+    monkeypatch.setattr(dt_util, "utcnow", lambda: fake_now)
+    monkeypatch.setattr(
+        dt_util, "start_of_local_day", lambda: datetime(2026, 10, 22, tzinfo=UTC)
+    )
+    start = int(fake_now.timestamp()) - 100
+    visit = _record(21, RecordType.CAT_VISIT, sample_cat.id, start, start + 31)
+    snap = _build_snapshot(sample_device, sample_status, [sample_cat], [visit])
+    sensor = object.__new__(NeakasaCatStayTodaySensor)
+    with patch.object(
+        NeakasaCatStayTodaySensor,
+        "coordinator",
+        new_callable=lambda: property(
+            lambda self: type("Coordinator", (), {"data": NeakasaPayload(devices={sample_device.iot_id: snap})})()
+        ),
+    ), patch.object(
+        NeakasaCatStayTodaySensor,
+        "iot_id",
+        new_callable=lambda: property(lambda self: sample_device.iot_id),
+    ), patch.object(
+        NeakasaCatStayTodaySensor,
+        "cat_id",
+        new_callable=lambda: property(lambda self: sample_cat.id),
+    ):
+        assert sensor.native_value == 31
