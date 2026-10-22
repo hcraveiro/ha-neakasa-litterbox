@@ -8,7 +8,7 @@ import time
 from typing import TYPE_CHECKING
 
 from homeassistant.helpers.storage import Store
-from neakasa_litterbox_sdk import DeviceStatus
+from neakasa_litterbox_sdk import DeviceStatus, OperatingState
 
 from .const import LOGGER
 from .data import NeakasaPayload
@@ -198,12 +198,11 @@ class NeakasaPushClient:
         }
         if not patch:
             return
-        old_operating = str(target.status.operating_state).lower()
-        new_operating = str(
-            patch.get("operating_state", target.status.operating_state)
-        ).lower()
-        if old_operating.endswith("leveling") and not new_operating.endswith(
-            "leveling"
+        old_operating = target.status.operating_state
+        new_operating = patch.get("operating_state", old_operating)
+        if (
+            old_operating == OperatingState.LEVELING
+            and new_operating != OperatingState.LEVELING
         ):
             device_id = target.device["iot_id"]
             now = int(time.time())
