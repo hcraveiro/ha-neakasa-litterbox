@@ -175,8 +175,9 @@ def _build_snapshot(
     records: list[ToiletRecord],
 ) -> NeakasaDeviceSnapshot:
     """Aggregate the raw SDK payloads into a snapshot consumed by entities."""
-    visit_records = [r for r in records if r.record_type == RecordType.CAT_VISIT]
-    clean_records = [r for r in records if r.record_type == RecordType.CLEAN_CYCLE]
+    unique_records = list({r.record_id: r for r in records}.values())
+    visit_records = [r for r in unique_records if r.record_type == RecordType.CAT_VISIT]
+    clean_records = [r for r in unique_records if r.record_type == RecordType.CLEAN_CYCLE]
     today_start = int(dt_util.start_of_local_day().timestamp())
 
     todays_visits = [r for r in visit_records if r.start_time >= today_start]
@@ -198,7 +199,7 @@ def _build_snapshot(
             last_visit_weight=latest.weight if latest is not None else None,
             last_visit_weight_unit=latest.unit if latest is not None else None,
             visits_today=len(todays),
-            stay_today_seconds=sum(max(0, r.duration_seconds) for r in todays),
+            stay_today_seconds=sum(\n                max(0, min(r.end_time, int(dt_util.utcnow().timestamp())) - max(r.start_time, today_start))\n                for r in cat_records if r.end_time > today_start\n            ),
         )
 
     info: NeakasaDeviceInfo = {
@@ -219,7 +220,7 @@ def _build_snapshot(
         last_clean_at=last_clean_at,
         cat_stats=cat_stats,
         recent_records=tuple(sorted(
-            (record for record in records if record.record_type in (RecordType.CAT_VISIT, RecordType.CLEAN_CYCLE)),
+            (record for record in unique_records if record.record_type in (RecordType.CAT_VISIT, RecordType.CLEAN_CYCLE)),
             key=lambda record: (record.start_time, record.record_id),
             reverse=True,
         )[:30]),
