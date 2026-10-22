@@ -71,7 +71,6 @@ def test_stay_today_clips_visit_crossing_midnight(
     assert snap.cat_stats[sample_cat.id]["visits_today"] == 0
 
 
-
 def test_recent_activity_sensor_schema(
     sample_device, sample_status, sample_cat, monkeypatch
 ):
@@ -102,9 +101,7 @@ def test_recent_activity_sensor_schema(
         assert events[1]["cat"] == sample_cat.name
         assert events[1]["duration_seconds"] == 45
         assert events[1]["weight_unit"] == "kg"
-        assert sensor.native_value == datetime.fromtimestamp(
-            clean.start_time, tz=UTC
-        )
+        assert sensor.native_value == datetime.fromtimestamp(clean.start_time, tz=UTC)
 
 
 def test_native_snapshot_no_records(sample_device, sample_status, sample_cat):
