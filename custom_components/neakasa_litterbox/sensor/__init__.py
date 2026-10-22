@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 from homeassistant.core import callback
 
 from .cat_last_visit import NeakasaCatLastVisitSensor
+from .cat_stay_today import NeakasaCatStayTodaySensor
 from .cat_visits_today import NeakasaCatVisitsTodaySensor
 from .cat_weight import NeakasaCatWeightSensor
-from .cat_stay_today import NeakasaCatStayTodaySensor
-from .recent_activity import NeakasaRecentActivitySensor
 from .last_visit import NeakasaLastVisitSensor
 from .operating_state import NeakasaOperatingStateSensor
+from .recent_activity import NeakasaRecentActivitySensor
 from .sand_percent import NeakasaSandPercentSensor
 from .visits_today import NeakasaVisitsTodaySensor
 
@@ -29,12 +29,12 @@ if TYPE_CHECKING:
 
 __all__ = [
     "NeakasaCatLastVisitSensor",
+    "NeakasaCatStayTodaySensor",
     "NeakasaCatVisitsTodaySensor",
     "NeakasaCatWeightSensor",
-    "NeakasaCatStayTodaySensor",
-    "NeakasaRecentActivitySensor",
     "NeakasaLastVisitSensor",
     "NeakasaOperatingStateSensor",
+    "NeakasaRecentActivitySensor",
     "NeakasaSandPercentSensor",
     "NeakasaVisitsTodaySensor",
 ]
