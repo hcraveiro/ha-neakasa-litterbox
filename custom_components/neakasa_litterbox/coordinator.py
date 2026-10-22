@@ -199,7 +199,15 @@ def _build_snapshot(
             last_visit_weight=latest.weight if latest is not None else None,
             last_visit_weight_unit=latest.unit if latest is not None else None,
             visits_today=len(todays),
-            stay_today_seconds=sum(\n                max(0, min(r.end_time, int(dt_util.utcnow().timestamp())) - max(r.start_time, today_start))\n                for r in cat_records if r.end_time > today_start\n            ),
+            stay_today_seconds=sum(
+                max(
+                    0,
+                    min(r.end_time, int(dt_util.utcnow().timestamp()))
+                    - max(r.start_time, today_start),
+                )
+                for r in cat_records
+                if r.end_time > today_start
+            ),
         )
 
     info: NeakasaDeviceInfo = {
