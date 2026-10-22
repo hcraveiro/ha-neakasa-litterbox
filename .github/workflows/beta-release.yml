@@ -36,9 +36,9 @@ jobs:
           )
           assert version.endswith("b1"), "This workflow is limited to beta b1."
           PY
-          cd custom_components
-          zip -r ../neakasa_litterbox.zip neakasa_litterbox
-          cd ..
+          cd custom_components/neakasa_litterbox
+          zip -r ../../neakasa_litterbox.zip .
+          cd ../..
           unzip -l neakasa_litterbox.zip | head -n 20
 
       - name: Publish prerelease with HACS archive
