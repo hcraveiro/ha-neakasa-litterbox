@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from unittest.mock import MagicMock
 
 from neakasa_litterbox_sdk import RecordType, ToiletRecord
 
@@ -113,9 +114,6 @@ def test_native_snapshot_no_records(sample_device, sample_status, sample_cat):
 def test_stay_today_sensor_reads_native_aggregate(
     sample_device, sample_status, sample_cat, monkeypatch
 ):
-    from types import SimpleNamespace
-    from unittest.mock import patch
-
     from homeassistant.util import dt as dt_util
 
     from custom_components.neakasa_litterbox.data import NeakasaPayload
@@ -129,22 +127,9 @@ def test_stay_today_sensor_reads_native_aggregate(
     visit = _record(21, RecordType.CAT_VISIT, sample_cat.id, start, start + 31)
     snap = _build_snapshot(sample_device, sample_status, [sample_cat], [visit])
     payload = NeakasaPayload(devices={sample_device.iot_id: snap})
-    sensor = object.__new__(NeakasaCatStayTodaySensor)
-    with (
-        patch.object(
-            NeakasaCatStayTodaySensor,
-            "coordinator",
-            property(lambda _self: SimpleNamespace(data=payload)),
-        ),
-        patch.object(
-            NeakasaCatStayTodaySensor,
-            "iot_id",
-            property(lambda _self: sample_device.iot_id),
-        ),
-        patch.object(
-            NeakasaCatStayTodaySensor,
-            "cat_id",
-            property(lambda _self: sample_cat.id),
-        ),
-    ):
-        assert sensor.native_value == 31
+    coordinator = MagicMock()
+    coordinator.data = payload
+    sensor = NeakasaCatStayTodaySensor(
+        coordinator, sample_device.iot_id, sample_cat.id
+    )
+    assert sensor.native_value == 31
