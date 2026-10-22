@@ -1,11 +1,22 @@
-## Neakasa Litterbox v1.4.4b1 — Native activity beta
+## Neakasa Litterbox v1.4.4b2 — Native leveling history
 
-This is an **experimental fork** based on upstream 1.4.3. It adds native per-cat `Stay today` sensors (seconds) and a litter-box `Recent activity` timestamp sensor whose `events` attribute contains structured visits and cleaning cycles from the Neakasa cloud.
+This beta extends v1.4.4b1 and restores important activity details required by the Lovelace cards.
 
-**Compatibility:** All existing sensor identifiers remain unchanged. The new sensors are additional. The existing `neakasa_log.yaml` package and custom cards must remain in place until the cards are migrated and live parity verified.
+### Changes
+- Add `completed_at` to cloud activity events so cleaning cycles are displayed at their **completion time**, as in the Neakasa app.
+- Capture leveling completions from the live MQTT operating-state transitions.
+- Persist recorded leveling times in Home Assistant storage across restarts, and retain them during cloud polling updates.
+- Merge leveling events with cloud visits and clean cycles in the `Recent activity` sensor's `events` attribute.
+- Keep the v1.4.4b1 per-cat daily stay sensors and other existing entities intact.
 
-**Known limitation:** Manual leveling does not yet have an identified cloud record representation, so it is not included in the native timeline.
+### Important limitations
+- Leveling events that happened **before installing v1.4.4b2** cannot be recovered from the available cloud history.
+- The SDK does not yet distinguish reliably between manually triggered and automatic leveling, so the event is exposed as `leveling`, and the card displays *Leveling completed*.
+- A leveling event must be observed through the live MQTT status stream to be recorded. Events during a disconnection may not be captured.
 
-**Installation:** The HACS beta workflow attaches `neakasa_litterbox.zip` to this release. Both fork and upstream use the same integration domain; do not install a duplicate instance. Follow [the beta test plan](https://github.com/hcraveiro/ha-neakasa-litterbox/blob/feat/native-cat-history/docs/beta-test-plan.md) and make a Home Assistant backup first.
+### Installation
+This is a prerelease. The release includes `neakasa_litterbox.zip` for HACS. Update your existing integration to this version, restart Home Assistant, and retain the existing entities and configuration entry.
 
-**Rollback:** Reinstall the upstream Neakasa Litterbox version and restart HA. Do not delete your existing config entry, package, or entities.
+To see the corrected activity texts and leveling icon, also update [Neakasa M1 Card](https://github.com/hcraveiro/neakasa-m1-card) to v1.2.1 or later.
+
+**Do not remove an existing event-logging package until the new timeline has been checked after live leveling tests.**
