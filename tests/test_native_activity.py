@@ -2,18 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import UTC, datetime
-from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 from neakasa_litterbox_sdk import RecordType, ToiletRecord
 
 from custom_components.neakasa_litterbox.coordinator import _build_snapshot
-from custom_components.neakasa_litterbox.data import NeakasaPayload
-from custom_components.neakasa_litterbox.sensor.cat_stay_today import (
-    NeakasaCatStayTodaySensor,
-)
 from custom_components.neakasa_litterbox.sensor.recent_activity import (
     NeakasaRecentActivitySensor,
 )
