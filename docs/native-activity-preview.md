@@ -31,3 +31,7 @@ These records are retrieved using the integration's existing Neakasa cloud recor
 - A card update is needed before the existing Recent Activity card can consume the new sensor's `events` attribute. The old package-based card continues working until then.
 - The new numeric stay sensor reports seconds; the Our Cats card must format them as a duration.
 - This is an **unreleased draft**, not yet validated with live device data. Keep the current integration and package installed until testing succeeds.
+
+## Validation
+
+The regression tests are located in `tests/test_native_activity.py` and cover duplicate records, cleaning events, daily duration and local-day boundaries. GitHub Actions must run successfully before this draft is promoted to a release.
