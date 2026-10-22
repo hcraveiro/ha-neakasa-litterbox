@@ -198,21 +198,23 @@ class NeakasaPushClient:
         }
         if not patch:
             return
+        # The SDK can emit a transient IDLE while the device is still
+        # leveling. Never treat that transition as confirmed completion.
         old_operating = target.status.operating_state
         new_operating = patch.get("operating_state", old_operating)
-        if (
-            old_operating == OperatingState.LEVELING
-            and new_operating != OperatingState.LEVELING
-        ):
-            device_id = target.device["iot_id"]
-            now = int(time.time())
-            previous = self._coordinator.leveling_events.get(device_id, [])
-            self._coordinator.leveling_events[device_id] = [
-                *[ts for ts in previous if now - ts <= 7 * 86400],
-                now,
-            ][-30:]
-            self._hass.async_create_task(
-                self._leveling_store.async_save(self._coordinator.leveling_events)
+        if new_operating != old_operating:
+            LOGGER.info(
+                "Neakasa MQTT operating state changed for %s: %s -> %s",
+                target.device["device_name"],
+                old_operating,
+                new_operating,
+            )
+        if old_operating == OperatingState.LEVELING and new_operating != old_operating:
+            LOGGER.warning(
+                "Neakasa transient leveling transition %s -> %s; "
+                "completion deliberately not recorded without confirmation",
+                old_operating,
+                new_operating,
             )
         # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
         new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
