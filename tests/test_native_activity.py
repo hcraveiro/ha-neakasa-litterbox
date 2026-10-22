@@ -129,7 +129,5 @@ def test_stay_today_sensor_reads_native_aggregate(
     payload = NeakasaPayload(devices={sample_device.iot_id: snap})
     coordinator = MagicMock()
     coordinator.data = payload
-    sensor = NeakasaCatStayTodaySensor(
-        coordinator, sample_device.iot_id, sample_cat.id
-    )
+    sensor = NeakasaCatStayTodaySensor(coordinator, sample_device.iot_id, sample_cat.id)
     assert sensor.native_value == 31
