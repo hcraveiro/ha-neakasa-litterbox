@@ -213,9 +213,7 @@ class NeakasaPushClient:
                 now,
             ][-30:]
             self._hass.async_create_task(
-                self._leveling_store.async_save(
-                    self._coordinator.leveling_events
-                )
+                self._leveling_store.async_save(self._coordinator.leveling_events)
             )
         # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
         new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
