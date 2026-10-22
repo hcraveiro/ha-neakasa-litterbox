@@ -51,6 +51,9 @@ class NeakasaRecentActivitySensor(NeakasaDeviceEntity, SensorEntity):
                     record.start_time, tz=UTC
                 ).isoformat(),
                 "duration_seconds": max(0, record.duration_seconds),
+                "completed_at": datetime.fromtimestamp(
+                    record.end_time, tz=UTC
+                ).isoformat(),
             }
             if kind == "cat_visit":
                 event["cat"] = cat_names.get(record.cat_id, "Unknown")
