@@ -15,6 +15,9 @@ The integration is **cloud push**: an MQTT status stream keeps state in real tim
 
 ## Features
 
+- Native recent-activity sensor with structured cat visits, cleaning completions and observed leveling completions (including recorded durations).
+- Per-cat daily stay duration sensors, derived from cloud visit records.
+
 - Multiple litter boxes per account, discovered dynamically.
 - Sub-device per cat, linked to its litter box in the device registry.
 - Real-time updates via MQTT push, with polling fallback (default 10 min).
@@ -94,7 +97,7 @@ Switches, the sand-calibration slider and buttons run an **optimistic update**: 
 |---|---|
 | Home Assistant | ≥ 2026.5.1 (`hacs.json`; the dev pin in `pyproject.toml` tracks the same series) |
 | Python | 3.14 |
-| `neakasa-litterbox-sdk` | pinned in [`manifest.json`](./custom_components/neakasa_litterbox/manifest.json) (currently 0.2.1) |
+| `neakasa-litterbox-sdk` | pinned in [`manifest.json`](./custom_components/neakasa_litterbox/manifest.json) (currently 0.2.2) |
 
 The integration tracks Home Assistant's [Integration Quality Scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/); the per-rule status lives in [`custom_components/neakasa_litterbox/quality_scale.yaml`](./custom_components/neakasa_litterbox/quality_scale.yaml).
 
@@ -103,6 +106,9 @@ The integration tracks Home Assistant's [Integration Quality Scale](https://deve
 Use **⚙ Configure → Download diagnostics** to get a redacted dump (email and password are stripped) of the config entry and the currently-registered devices. Attach the file when opening an issue.
 
 ## Known limitations
+
+- Leveling completion requires observing a sustained MQTT transition; earlier events cannot be reconstructed retrospectively. The SDK does not reliably distinguish manual and automatic leveling.
+- Brief cloud/MQTT reconciliation glitches may cause transient operating-state changes; the native activity record preserves confirmed completions.
 
 - The Neakasa cloud occasionally drops the MQTT dispatcher (`Disconnected during message iteration`). A supervisor reopens the stream with exponential backoff (5 s up to 5 min) and refreshes the coordinator once it is back; polling keeps the entities correct in the meantime.
 - The Neakasa SDK does not expose a way to disable HTTPS verification, so the integration assumes the local Python install can validate `*.neakasa.com` (most distributions can; on macOS Python builds the helper script auto-injects `certifi`'s bundle — see [`scripts/develop`](./scripts/develop)).
