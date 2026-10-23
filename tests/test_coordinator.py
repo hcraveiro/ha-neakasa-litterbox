@@ -248,6 +248,7 @@ async def test_cloud_poll_notifies_leveling_observer(
     hass, sample_device, sample_status, sample_cat
 ):
     from dataclasses import replace
+
     from neakasa_litterbox_sdk import OperatingState
 
     client = MagicMock()
