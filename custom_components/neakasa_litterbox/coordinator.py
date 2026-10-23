@@ -11,7 +11,7 @@ from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from neakasa_litterbox_sdk import RecordType
+from neakasa_litterbox_sdk import OperatingState, RecordType
 
 from .const import (
     CONF_STATISTICS_LOOKBACK_DAYS,
@@ -35,7 +35,7 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from datetime import timedelta
 
     from homeassistant.core import HomeAssistant
@@ -62,6 +62,9 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
         """Initialize."""
         self.leveling_events: dict[str, list[int]] = {}
         self.leveling_durations: dict[str, dict[int, int]] = {}
+        self.leveling_state_callback: (
+            Callable[[str, OperatingState, OperatingState], None] | None
+        ) = None
         super().__init__(
             hass=hass,
             logger=LOGGER,
@@ -81,7 +84,7 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
             ),
         )
 
-    async def _async_update_data(self) -> NeakasaPayload:
+    async def _async_update_data(self) -> NeakasaPayload:  # noqa: PLR0912
         """
         Fetch devices, status, cats and records in parallel per device.
 
@@ -144,16 +147,20 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
                     if self.data is not None
                     else None
                 )
-                if (
-                    current is not None
-                    and current.status.operating_state != snap.status.operating_state
-                ):
-                    LOGGER.info(
-                        "Neakasa cloud poll state for %s: %s -> %s",
-                        snap.device["device_name"],
-                        current.status.operating_state,
-                        snap.status.operating_state,
-                    )
+                if current is not None:
+                    old_state = current.status.operating_state
+                    new_state = snap.status.operating_state
+                    if old_state != new_state:
+                        LOGGER.info(
+                            "Neakasa cloud poll state for %s: %s -> %s",
+                            snap.device["device_name"],
+                            old_state,
+                            new_state,
+                        )
+                    if self.leveling_state_callback is not None:
+                        self.leveling_state_callback(
+                            snap.device["iot_id"], old_state, new_state
+                        )
             return NeakasaPayload(
                 devices={
                     snap.device["iot_id"]: dataclasses.replace(

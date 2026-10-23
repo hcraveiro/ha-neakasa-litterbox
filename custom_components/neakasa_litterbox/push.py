@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from homeassistant.helpers.storage import Store
 from neakasa_litterbox_sdk import DeviceStatus, OperatingState
@@ -58,6 +58,7 @@ class NeakasaPushClient:
         self._entry = entry
         self._api = api
         self._coordinator = coordinator
+        self._coordinator.leveling_state_callback = self._observe_leveling_state
         self._stream: StatusStream | None = None
         self._supervisor: asyncio.Task[None] | None = None
         self._stopping: bool = False
@@ -225,7 +226,38 @@ class NeakasaPushClient:
                 old_operating,
                 new_operating,
             )
-        device_id = target.device["iot_id"]
+        self._observe_leveling_state(
+            target.device["iot_id"],
+            old_operating,
+            cast("OperatingState", new_operating),
+        )
+        # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
+        new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
+        new_snapshot = dataclasses.replace(
+            target,
+            status=new_status,
+            leveling_events=tuple(
+                self._coordinator.leveling_events.get(target.device["iot_id"], [])
+            ),
+            leveling_durations=self._coordinator.leveling_durations.get(
+                target.device["iot_id"], {}
+            ),
+        )
+        new_payload = NeakasaPayload(
+            devices={
+                **payload.devices,
+                target.device["iot_id"]: new_snapshot,
+            },
+        )
+        self._coordinator.async_set_updated_data(new_payload)
+
+    def _observe_leveling_state(
+        self,
+        device_id: str,
+        old_operating: OperatingState,
+        new_operating: OperatingState,
+    ) -> None:
+        """Record confirmed leveling transitions from MQTT or cloud polling."""
         now = time.time()
         if new_operating == OperatingState.LEVELING:
             self._leveling_started.setdefault(device_id, now)
@@ -267,25 +299,6 @@ class NeakasaPushClient:
                     new_operating,
                     elapsed,
                 )
-        # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
-        new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
-        new_snapshot = dataclasses.replace(
-            target,
-            status=new_status,
-            leveling_events=tuple(
-                self._coordinator.leveling_events.get(target.device["iot_id"], [])
-            ),
-            leveling_durations=self._coordinator.leveling_durations.get(
-                target.device["iot_id"], {}
-            ),
-        )
-        new_payload = NeakasaPayload(
-            devices={
-                **payload.devices,
-                target.device["iot_id"]: new_snapshot,
-            },
-        )
-        self._coordinator.async_set_updated_data(new_payload)
 
 
 def _dispatch_task(stream: StatusStream) -> object | None:

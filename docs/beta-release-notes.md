@@ -1,22 +1,22 @@
-## Neakasa Litterbox v1.4.4b4 — Confirmed leveling duration
+## Neakasa Litterbox v1.4.5b1 — Reliable leveling completion
 
-### Improvements
-- Detect leveling completion after a sustained MQTT `leveling` → `idle` transition, rejecting transient state glitches shorter than 15 seconds.
-- Measure the actual observed duration and publish `duration_seconds` in the native `recent_activity.events` sensor.
-- Persist completion timestamps and durations in Home Assistant storage across restarts.
-- Preserve activity history and measured times through cloud polling refreshes.
-- Continue exposing cloud cleaning completion times and per-cat daily durations.
+### Fixes
+- Reconcile leveling transitions observed through either MQTT or cloud polling.
+- Share leveling start tracking across both sources, so mixed-source operations can be recorded.
+- Record the observed duration and completion time for confirmed leveling operations.
+- Preserve the existing 15-second minimum to reject transient state glitches.
+- Keep completed leveling events and durations persisted across Home Assistant restarts.
 
-### Validation
-The preceding v1.4.4b3 live test observed `leveling` from 07:51:42 to 07:52:22 (approximately 40 seconds), followed by a cat visit. The v1.4.4b4 regression tests reproduce this case and verify that a short idle glitch does not create a false completion.
+### Regression coverage
+- Leveling starts via cloud polling and ends via MQTT.
+- Leveling starts via MQTT and ends via cloud polling.
+- Cloud polling delivers the state transition to the common observer.
+- Existing MQTT-only leveling duration and transient-state tests remain in place.
 
-### Limitations
-- Previously completed leveling events are not imported retroactively.
-- Leveling must be observed on the MQTT status stream from start to finish to be recorded.
-- Manual versus automatic leveling cannot yet be distinguished reliably using the exposed SDK status; consumers should not rely on this classification.
-- Duration is measured from received status transitions and may differ slightly from physical operation time.
+### Known limitations
+- A leveling operation must have its start and finish observed by the integration; fully missed operations cannot be reconstructed.
+- Completion duration is measured between observed transitions and may include delays introduced by cloud polling.
+- The SDK does not reliably distinguish manual from automatic leveling.
 
 ### Installation
-Update the Neakasa Litterbox integration in HACS to v1.4.4b4, restart Home Assistant, and perform one manual leveling test. The Neakasa M1 Card v1.2.1 already supports showing `Manual leveling completed in X s` when a nonzero duration is provided.
-
-Keep the old YAML logging package until the live event is verified.
+Update to v1.4.5b1 from HACS beta releases and restart Home Assistant. Perform a manual leveling cycle and confirm that it appears in the native Recent Activity sensor after returning to idle.
