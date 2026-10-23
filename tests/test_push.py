@@ -217,3 +217,82 @@ async def test_sustained_leveling_records_measured_duration(push_setup, hass):
     assert coordinator.leveling_durations[snap.device["iot_id"]][1040] == 40
     latest = coordinator.async_set_updated_data.call_args.args[0]
     assert latest.devices[snap.device["iot_id"]].leveling_durations[1040] == 40
+
+
+@pytest.mark.parametrize("start_source,end_source", [
+    ("poll", "poll"),
+    ("poll", "mqtt"),
+    ("mqtt", "poll"),
+])
+async def test_leveling_reconciles_push_and_poll(
+    push_setup, hass, start_source, end_source
+):
+    from dataclasses import replace
+    from unittest.mock import patch
+
+    push, _, _, coordinator, snap, _ = push_setup
+    device_id = snap.device["iot_id"]
+    idle = snap.status.operating_state
+    leveling = OperatingState.LEVELING
+
+    with (
+        patch(
+            "custom_components.neakasa_litterbox.push.time.time",
+            side_effect=[1000.0, 1098.0],
+        ),
+        patch.object(push._leveling_store, "async_save", new_callable=AsyncMock),
+        patch.object(push._duration_store, "async_save", new_callable=AsyncMock),
+    ):
+        if start_source == "poll":
+            push.observe_operating_state(device_id, idle, leveling)
+        else:
+            push._handle_change(
+                StatusUpdate(
+                    device_name=snap.device["device_name"],
+                    changes={"operating_state": leveling},
+                )
+            )
+        coordinator.data = NeakasaPayload(
+            devices={
+                device_id: replace(
+                    snap, status=replace(snap.status, operating_state=leveling)
+                )
+            }
+        )
+        if end_source == "poll":
+            push.observe_operating_state(device_id, leveling, OperatingState.IDLE)
+        else:
+            push._handle_change(
+                StatusUpdate(
+                    device_name=snap.device["device_name"],
+                    changes={"operating_state": OperatingState.IDLE},
+                )
+            )
+        await hass.async_block_till_done()
+
+    assert coordinator.leveling_events[device_id] == [1098]
+    assert coordinator.leveling_durations[device_id][1098] == 98
+
+
+async def test_poll_and_mqtt_same_transition_does_not_duplicate_leveling(
+    push_setup, hass
+):
+    from unittest.mock import patch
+
+    push, _, _, coordinator, snap, _ = push_setup
+    device_id = snap.device["iot_id"]
+    with (
+        patch(
+            "custom_components.neakasa_litterbox.push.time.time",
+            side_effect=[1000.0, 1040.0],
+        ),
+        patch.object(push._leveling_store, "async_save", new_callable=AsyncMock),
+        patch.object(push._duration_store, "async_save", new_callable=AsyncMock),
+    ):
+        push.observe_operating_state(device_id, OperatingState.IDLE, OperatingState.LEVELING)
+        push.observe_operating_state(device_id, OperatingState.LEVELING, OperatingState.LEVELING)
+        push.observe_operating_state(device_id, OperatingState.LEVELING, OperatingState.IDLE)
+        push.observe_operating_state(device_id, OperatingState.IDLE, OperatingState.IDLE)
+        await hass.async_block_till_done()
+
+    assert coordinator.leveling_events[device_id] == [1040]
