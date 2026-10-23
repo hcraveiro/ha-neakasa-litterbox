@@ -189,43 +189,15 @@ class NeakasaPushClient:
         except Exception:  # noqa: BLE001 - shutdown should swallow any transport error
             LOGGER.debug("Push stream stop raised; ignoring", exc_info=True)
 
-    def _handle_change(self, update: StatusUpdate) -> None:
-        """Merge an MQTT delta into the coordinator's last payload."""
-        payload: NeakasaPayload | None = self._coordinator.data
-        if payload is None:
+    def observe_operating_state(
+        self,
+        device_id: str,
+        old_operating: OperatingState,
+        new_operating: OperatingState,
+    ) -> None:
+        """Track leveling transitions from either MQTT or cloud polling."""
+        if old_operating == new_operating:
             return
-        target = next(
-            (
-                snap
-                for snap in payload.devices.values()
-                if snap.device["device_name"] == update.device_name
-            ),
-            None,
-        )
-        if target is None:
-            return
-        # SDK fans the ``StatusUpdate`` payload into a generic JSON shape; we
-        # filter to known ``DeviceStatus`` fields whose values are always
-        # str/int/bool per the dataclass schema before handing them off.
-        patch: dict[str, bool | int | str] = {
-            key: value
-            for key, value in update.changes.items()
-            if key in _STATUS_FIELDS and isinstance(value, (bool, int, str))
-        }
-        if not patch:
-            return
-        # The SDK can emit a transient IDLE while the device is still
-        # leveling. Never treat that transition as confirmed completion.
-        old_operating = target.status.operating_state
-        new_operating = patch.get("operating_state", old_operating)
-        if new_operating != old_operating:
-            LOGGER.info(
-                "Neakasa MQTT operating state changed for %s: %s -> %s",
-                target.device["device_name"],
-                old_operating,
-                new_operating,
-            )
-        device_id = target.device["iot_id"]
         now = time.time()
         if new_operating == OperatingState.LEVELING:
             self._leveling_started.setdefault(device_id, now)
@@ -267,6 +239,46 @@ class NeakasaPushClient:
                     new_operating,
                     elapsed,
                 )
+
+    def _handle_change(self, update: StatusUpdate) -> None:
+        """Merge an MQTT delta into the coordinator's last payload."""
+        payload: NeakasaPayload | None = self._coordinator.data
+        if payload is None:
+            return
+        target = next(
+            (
+                snap
+                for snap in payload.devices.values()
+                if snap.device["device_name"] == update.device_name
+            ),
+            None,
+        )
+        if target is None:
+            return
+        # SDK fans the ``StatusUpdate`` payload into a generic JSON shape; we
+        # filter to known ``DeviceStatus`` fields whose values are always
+        # str/int/bool per the dataclass schema before handing them off.
+        patch: dict[str, bool | int | str] = {
+            key: value
+            for key, value in update.changes.items()
+            if key in _STATUS_FIELDS and isinstance(value, (bool, int, str))
+        }
+        if not patch:
+            return
+        # The SDK can emit a transient IDLE while the device is still
+        # leveling. Never treat that transition as confirmed completion.
+        old_operating = target.status.operating_state
+        new_operating = patch.get("operating_state", old_operating)
+        if new_operating != old_operating:
+            LOGGER.info(
+                "Neakasa MQTT operating state changed for %s: %s -> %s",
+                target.device["device_name"],
+                old_operating,
+                new_operating,
+            )
+        self.observe_operating_state(
+            target.device["iot_id"], old_operating, new_operating
+        )
         # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
         new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
         new_snapshot = dataclasses.replace(
