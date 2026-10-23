@@ -62,9 +62,9 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
         """Initialize."""
         self.leveling_events: dict[str, list[int]] = {}
         self.leveling_durations: dict[str, dict[int, int]] = {}
-        self.leveling_state_callback: Callable[
-            [str, OperatingState, OperatingState], None
-        ] | None = None
+        self.leveling_state_callback: (
+            Callable[[str, OperatingState, OperatingState], None] | None
+        ) = None
         super().__init__(
             hass=hass,
             logger=LOGGER,
