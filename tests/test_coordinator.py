@@ -244,6 +244,7 @@ def test_build_snapshot_handles_no_records(sample_device, sample_status, sample_
     assert snap.cat_stats[sample_cat.id]["last_visit_at"] is None
     assert snap.cat_stats[sample_cat.id]["last_visit_weight_unit"] is None
 
+
 async def test_cloud_poll_notifies_leveling_observer(
     hass, sample_device, sample_status, sample_cat
 ):
