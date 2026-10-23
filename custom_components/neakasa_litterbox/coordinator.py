@@ -144,10 +144,12 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
                     if self.data is not None
                     else None
                 )
-                if (
-                    current is not None
-                    and current.status.operating_state != snap.status.operating_state
-                ):
+                if current is not None and current.status.operating_state != snap.status.operating_state:
+                    self.config_entry.runtime_data.push.observe_operating_state(
+                        snap.device["iot_id"],
+                        current.status.operating_state,
+                        snap.status.operating_state,
+                    )
                     LOGGER.info(
                         "Neakasa cloud poll state for %s: %s -> %s",
                         snap.device["device_name"],
