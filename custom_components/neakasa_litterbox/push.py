@@ -248,9 +248,7 @@ class NeakasaPushClient:
                     completed_at
                 ] = round(elapsed)
                 self._hass.async_create_task(
-                    self._leveling_store.async_save(
-                        self._coordinator.leveling_events
-                    )
+                    self._leveling_store.async_save(self._coordinator.leveling_events)
                 )
                 self._hass.async_create_task(
                     self._duration_store.async_save(
