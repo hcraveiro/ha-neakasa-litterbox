@@ -217,3 +217,64 @@ async def test_sustained_leveling_records_measured_duration(push_setup, hass):
     assert coordinator.leveling_durations[snap.device["iot_id"]][1040] == 40
     latest = coordinator.async_set_updated_data.call_args.args[0]
     assert latest.devices[snap.device["iot_id"]].leveling_durations[1040] == 40
+
+async def test_poll_leveling_then_mqtt_idle_records_completion(push_setup, hass):
+    from unittest.mock import patch
+
+    push, _, _, coordinator, snap, _ = push_setup
+    device_id = snap.device["iot_id"]
+    with (
+        patch(
+            "custom_components.neakasa_litterbox.push.time.time",
+            side_effect=[1000.0, 1098.0],
+        ),
+        patch.object(push._leveling_store, "async_save", new_callable=AsyncMock),
+        patch.object(push._duration_store, "async_save", new_callable=AsyncMock),
+    ):
+        coordinator.leveling_state_callback(
+            device_id, OperatingState.IDLE, OperatingState.LEVELING
+        )
+        from dataclasses import replace
+
+        leveling_snapshot = replace(
+            snap, status=replace(snap.status, operating_state=OperatingState.LEVELING)
+        )
+        coordinator.data = NeakasaPayload(devices={device_id: leveling_snapshot})
+        push._handle_change(
+            StatusUpdate(
+                device_name=snap.device["device_name"],
+                changes={"operating_state": OperatingState.IDLE},
+            )
+        )
+        await hass.async_block_till_done()
+
+    assert coordinator.leveling_events[device_id] == [1098]
+    assert coordinator.leveling_durations[device_id][1098] == 98
+
+
+async def test_mqtt_leveling_then_poll_idle_records_completion(push_setup, hass):
+    from unittest.mock import patch
+
+    push, _, _, coordinator, snap, _ = push_setup
+    device_id = snap.device["iot_id"]
+    with (
+        patch(
+            "custom_components.neakasa_litterbox.push.time.time",
+            side_effect=[1000.0, 1098.0],
+        ),
+        patch.object(push._leveling_store, "async_save", new_callable=AsyncMock),
+        patch.object(push._duration_store, "async_save", new_callable=AsyncMock),
+    ):
+        push._handle_change(
+            StatusUpdate(
+                device_name=snap.device["device_name"],
+                changes={"operating_state": OperatingState.LEVELING},
+            )
+        )
+        coordinator.leveling_state_callback(
+            device_id, OperatingState.LEVELING, OperatingState.IDLE
+        )
+        await hass.async_block_till_done()
+
+    assert coordinator.leveling_events[device_id] == [1098]
+    assert coordinator.leveling_durations[device_id][1098] == 98
