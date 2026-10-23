@@ -219,7 +219,7 @@ async def test_sustained_leveling_records_measured_duration(push_setup, hass):
     assert latest.devices[snap.device["iot_id"]].leveling_durations[1040] == 40
 
 
-@pytest.mark.parametrize("start_source,end_source", [
+@pytest.mark.parametrize(("start_source", "end_source"), [
     ("poll", "poll"),
     ("poll", "mqtt"),
     ("mqtt", "poll"),
@@ -289,10 +289,18 @@ async def test_poll_and_mqtt_same_transition_does_not_duplicate_leveling(
         patch.object(push._leveling_store, "async_save", new_callable=AsyncMock),
         patch.object(push._duration_store, "async_save", new_callable=AsyncMock),
     ):
-        push.observe_operating_state(device_id, OperatingState.IDLE, OperatingState.LEVELING)
-        push.observe_operating_state(device_id, OperatingState.LEVELING, OperatingState.LEVELING)
-        push.observe_operating_state(device_id, OperatingState.LEVELING, OperatingState.IDLE)
-        push.observe_operating_state(device_id, OperatingState.IDLE, OperatingState.IDLE)
+        push.observe_operating_state(
+            device_id, OperatingState.IDLE, OperatingState.LEVELING
+        )
+        push.observe_operating_state(
+            device_id, OperatingState.LEVELING, OperatingState.LEVELING
+        )
+        push.observe_operating_state(
+            device_id, OperatingState.LEVELING, OperatingState.IDLE
+        )
+        push.observe_operating_state(
+            device_id, OperatingState.IDLE, OperatingState.IDLE
+        )
         await hass.async_block_till_done()
 
     assert coordinator.leveling_events[device_id] == [1040]
