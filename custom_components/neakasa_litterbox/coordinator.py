@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 from collections import defaultdict
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -84,7 +85,7 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
             ),
         )
 
-    async def _async_update_data(self) -> NeakasaPayload:
+    async def _async_update_data(self) -> NeakasaPayload:  # noqa: PLR0912
         """
         Fetch devices, status, cats and records in parallel per device.
 
