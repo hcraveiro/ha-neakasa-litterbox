@@ -44,6 +44,7 @@ class NeakasaDeviceSnapshot:
     cat_stats: Mapping[int, NeakasaCatStats] = field(default_factory=dict)
     recent_records: tuple[ToiletRecord, ...] = ()
     leveling_events: tuple[int, ...] = ()
+    leveling_durations: Mapping[int, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

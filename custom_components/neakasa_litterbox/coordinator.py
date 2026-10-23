@@ -61,6 +61,7 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
     ) -> None:
         """Initialize."""
         self.leveling_events: dict[str, list[int]] = {}
+        self.leveling_durations: dict[str, dict[int, int]] = {}
         super().__init__(
             hass=hass,
             logger=LOGGER,
@@ -159,6 +160,9 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
                         snap,
                         leveling_events=tuple(
                             self.leveling_events.get(snap.device["iot_id"], [])
+                        ),
+                        leveling_durations=self.leveling_durations.get(
+                            snap.device["iot_id"], {}
                         ),
                     )
                     for snap in snapshots

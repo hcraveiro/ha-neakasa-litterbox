@@ -73,7 +73,7 @@ class NeakasaRecentActivitySensor(NeakasaDeviceEntity, SensorEntity):
                 "type": "leveling",
                 "timestamp": datetime.fromtimestamp(timestamp, tz=UTC).isoformat(),
                 "completed_at": datetime.fromtimestamp(timestamp, tz=UTC).isoformat(),
-                "duration_seconds": 0,
+                "duration_seconds": snap.leveling_durations.get(timestamp, 0),
             }
             for timestamp in snap.leveling_events
         )
