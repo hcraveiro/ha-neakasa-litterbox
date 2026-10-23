@@ -32,6 +32,7 @@ _MAX_BACKOFF_SECONDS = 300.0
 _HEALTH_CHECK_INTERVAL_SECONDS = 15.0
 # A connection that survives this long resets the reconnect backoff.
 _STABLE_UPTIME_SECONDS = 60.0
+_MIN_CONFIRMED_LEVELING_SECONDS = 15
 
 
 class NeakasaPushClient:
@@ -233,7 +234,7 @@ class NeakasaPushClient:
             elapsed = now - started if started is not None else 0
             # Reject short, contradictory status spikes. Duration is always
             # measured from actual observed transitions, never assumed.
-            if elapsed >= 15 and new_operating == OperatingState.IDLE:
+            if elapsed >= _MIN_CONFIRMED_LEVELING_SECONDS and new_operating == OperatingState.IDLE:
                 completed_at = int(now)
                 previous = self._coordinator.leveling_events.get(device_id, [])
                 self._coordinator.leveling_events[device_id] = [
@@ -252,7 +253,9 @@ class NeakasaPushClient:
                     self._duration_store.async_save(
                         {
                             key: {str(ts): seconds for ts, seconds in times.items()}
-                            for key, times in self._coordinator.leveling_durations.items()
+                            for key, times in (
+                                self._coordinator.leveling_durations.items()
+                            )
                         }
                     )
                 )
