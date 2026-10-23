@@ -1,0 +1,55 @@
+name: Publish stable release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Stable version (must match integration manifest)'
+        required: true
+        default: '1.4.4'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-stable:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate version and prepare archive
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          manifest = json.loads(
+              Path("custom_components/neakasa_litterbox/manifest.json").read_text()
+          )
+          assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version), (
+              "This workflow only publishes stable versions."
+          )
+          assert version == manifest["version"], (
+              f"Requested {version} but manifest declares {manifest['version']}"
+          )
+          PY
+          cd custom_components/neakasa_litterbox
+          zip -r ../../neakasa_litterbox.zip . -x '*/__pycache__/*' '*.pyc'
+          cd ../..
+          unzip -l neakasa_litterbox.zip | head -n 25
+
+      - name: Publish stable release with HACS archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v${VERSION}" neakasa_litterbox.zip \
+            --target "${GITHUB_SHA}" \
+            --title "Neakasa Litterbox v${VERSION}" \
+            --notes-file "docs/release-notes-v${VERSION}.md"
