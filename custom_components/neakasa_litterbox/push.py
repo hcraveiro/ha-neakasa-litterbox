@@ -72,7 +72,7 @@ class NeakasaPushClient:
         """Restore completed leveling events between Home Assistant restarts."""
         saved = await self._leveling_store.async_load()
         if not isinstance(saved, dict):
-            return
+            saved = {}
         durations = await self._duration_store.async_load()
         if isinstance(durations, dict):
             self._coordinator.leveling_durations = {
