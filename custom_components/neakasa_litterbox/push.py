@@ -227,7 +227,9 @@ class NeakasaPushClient:
                 new_operating,
             )
         self._observe_leveling_state(
-            target.device["iot_id"], old_operating, new_operating
+            target.device["iot_id"],
+            old_operating,
+            cast("OperatingState", new_operating),
         )
         # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
         new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
