@@ -58,6 +58,7 @@ class NeakasaPushClient:
         self._entry = entry
         self._api = api
         self._coordinator = coordinator
+        self._coordinator.leveling_state_callback = self._observe_leveling_state
         self._stream: StatusStream | None = None
         self._supervisor: asyncio.Task[None] | None = None
         self._stopping: bool = False
@@ -225,48 +226,9 @@ class NeakasaPushClient:
                 old_operating,
                 new_operating,
             )
-        device_id = target.device["iot_id"]
-        now = time.time()
-        if new_operating == OperatingState.LEVELING:
-            self._leveling_started.setdefault(device_id, now)
-        elif old_operating == OperatingState.LEVELING:
-            started = self._leveling_started.pop(device_id, None)
-            elapsed = now - started if started is not None else 0
-            # Reject short, contradictory status spikes. Duration is always
-            # measured from actual observed transitions, never assumed.
-            if (
-                elapsed >= _MIN_CONFIRMED_LEVELING_SECONDS
-                and new_operating == OperatingState.IDLE
-            ):
-                completed_at = int(now)
-                previous = self._coordinator.leveling_events.get(device_id, [])
-                self._coordinator.leveling_events[device_id] = [
-                    *[ts for ts in previous if completed_at - ts <= 7 * 86400],
-                    completed_at,
-                ][-30:]
-                self._coordinator.leveling_durations.setdefault(device_id, {})[
-                    completed_at
-                ] = round(elapsed)
-                self._hass.async_create_task(
-                    self._leveling_store.async_save(self._coordinator.leveling_events)
-                )
-                self._hass.async_create_task(
-                    self._duration_store.async_save(
-                        {
-                            key: {str(ts): seconds for ts, seconds in times.items()}
-                            for key, times in (
-                                self._coordinator.leveling_durations.items()
-                            )
-                        }
-                    )
-                )
-            else:
-                LOGGER.info(
-                    "Neakasa leveling end unconfirmed (%s, %.1fs); "
-                    "no completion recorded",
-                    new_operating,
-                    elapsed,
-                )
+        self._observe_leveling_state(
+            target.device["iot_id"], old_operating, new_operating
+        )
         # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
         new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
         new_snapshot = dataclasses.replace(
@@ -286,6 +248,56 @@ class NeakasaPushClient:
             },
         )
         self._coordinator.async_set_updated_data(new_payload)
+
+
+    def _observe_leveling_state(
+        self,
+        device_id: str,
+        old_operating: OperatingState,
+        new_operating: OperatingState,
+    ) -> None:
+        """Record confirmed leveling transitions from MQTT or cloud polling."""
+            now = time.time()
+            if new_operating == OperatingState.LEVELING:
+                self._leveling_started.setdefault(device_id, now)
+            elif old_operating == OperatingState.LEVELING:
+                started = self._leveling_started.pop(device_id, None)
+                elapsed = now - started if started is not None else 0
+                # Reject short, contradictory status spikes. Duration is always
+                # measured from actual observed transitions, never assumed.
+                if (
+                    elapsed >= _MIN_CONFIRMED_LEVELING_SECONDS
+                    and new_operating == OperatingState.IDLE
+                ):
+                    completed_at = int(now)
+                    previous = self._coordinator.leveling_events.get(device_id, [])
+                    self._coordinator.leveling_events[device_id] = [
+                        *[ts for ts in previous if completed_at - ts <= 7 * 86400],
+                        completed_at,
+                    ][-30:]
+                    self._coordinator.leveling_durations.setdefault(device_id, {})[
+                        completed_at
+                    ] = round(elapsed)
+                    self._hass.async_create_task(
+                        self._leveling_store.async_save(self._coordinator.leveling_events)
+                    )
+                    self._hass.async_create_task(
+                        self._duration_store.async_save(
+                            {
+                                key: {str(ts): seconds for ts, seconds in times.items()}
+                                for key, times in (
+                                    self._coordinator.leveling_durations.items()
+                                )
+                            }
+                        )
+                    )
+                else:
+                    LOGGER.info(
+                        "Neakasa leveling end unconfirmed (%s, %.1fs); "
+                        "no completion recorded",
+                        new_operating,
+                        elapsed,
+                    )
 
 
 def _dispatch_task(stream: StatusStream) -> object | None:
