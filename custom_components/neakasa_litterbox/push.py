@@ -251,7 +251,6 @@ class NeakasaPushClient:
         )
         self._coordinator.async_set_updated_data(new_payload)
 
-
     def _observe_leveling_state(
         self,
         device_id: str,
