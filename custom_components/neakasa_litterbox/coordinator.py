@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 from collections import defaultdict
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from homeassistant.const import CONF_SCAN_INTERVAL
@@ -36,7 +35,7 @@ from .exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from datetime import timedelta
 
     from homeassistant.core import HomeAssistant
