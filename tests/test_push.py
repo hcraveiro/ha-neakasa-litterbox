@@ -218,6 +218,7 @@ async def test_sustained_leveling_records_measured_duration(push_setup, hass):
     latest = coordinator.async_set_updated_data.call_args.args[0]
     assert latest.devices[snap.device["iot_id"]].leveling_durations[1040] == 40
 
+
 async def test_poll_leveling_then_mqtt_idle_records_completion(push_setup, hass):
     from unittest.mock import patch
 
