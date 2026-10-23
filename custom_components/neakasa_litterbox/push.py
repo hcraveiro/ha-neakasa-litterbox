@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from homeassistant.helpers.storage import Store
 from neakasa_litterbox_sdk import DeviceStatus, OperatingState
@@ -277,7 +277,7 @@ class NeakasaPushClient:
                 new_operating,
             )
         self.observe_operating_state(
-            target.device["iot_id"], old_operating, new_operating
+            target.device["iot_id"], old_operating, cast("OperatingState", new_operating)
         )
         # ``patch`` was filtered to DeviceStatus fields above; mypy can't see it.
         new_status = dataclasses.replace(target.status, **patch)  # type: ignore[arg-type]
