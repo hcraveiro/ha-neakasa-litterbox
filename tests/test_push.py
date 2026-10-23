@@ -186,13 +186,15 @@ async def test_transient_leveling_to_idle_does_not_create_completion(push_setup,
 
 
 async def test_sustained_leveling_records_measured_duration(push_setup, hass):
-    from dataclasses import replace
     from unittest.mock import patch
 
     push, _, _, coordinator, snap, _ = push_setup
     coordinator.data = NeakasaPayload(devices={snap.device["iot_id"]: snap})
     with (
-        patch("custom_components.neakasa_litterbox.push.time.time", side_effect=[1000.0, 1040.0]),
+        patch(
+            "custom_components.neakasa_litterbox.push.time.time",
+            side_effect=[1000.0, 1040.0],
+        ),
         patch.object(push._leveling_store, "async_save", new_callable=AsyncMock),
         patch.object(push._duration_store, "async_save", new_callable=AsyncMock),
     ):
