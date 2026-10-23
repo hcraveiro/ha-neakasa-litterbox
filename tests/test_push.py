@@ -219,11 +219,14 @@ async def test_sustained_leveling_records_measured_duration(push_setup, hass):
     assert latest.devices[snap.device["iot_id"]].leveling_durations[1040] == 40
 
 
-@pytest.mark.parametrize(("start_source", "end_source"), [
-    ("poll", "poll"),
-    ("poll", "mqtt"),
-    ("mqtt", "poll"),
-])
+@pytest.mark.parametrize(
+    ("start_source", "end_source"),
+    [
+        ("poll", "poll"),
+        ("poll", "mqtt"),
+        ("mqtt", "poll"),
+    ],
+)
 async def test_leveling_reconciles_push_and_poll(
     push_setup, hass, start_source, end_source
 ):
