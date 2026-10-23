@@ -6,7 +6,7 @@ on:
       version:
         description: 'Beta version (must match integration manifest)'
         required: true
-        default: '1.4.4b4'
+        default: '1.4.5b1'
 
 permissions:
   contents: write
