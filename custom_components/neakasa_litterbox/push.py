@@ -234,7 +234,10 @@ class NeakasaPushClient:
             elapsed = now - started if started is not None else 0
             # Reject short, contradictory status spikes. Duration is always
             # measured from actual observed transitions, never assumed.
-            if elapsed >= _MIN_CONFIRMED_LEVELING_SECONDS and new_operating == OperatingState.IDLE:
+            if (
+                elapsed >= _MIN_CONFIRMED_LEVELING_SECONDS
+                and new_operating == OperatingState.IDLE
+            ):
                 completed_at = int(now)
                 previous = self._coordinator.leveling_events.get(device_id, [])
                 self._coordinator.leveling_events[device_id] = [
