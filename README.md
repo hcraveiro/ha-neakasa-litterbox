@@ -15,7 +15,7 @@ The integration is **cloud push**: an MQTT status stream keeps state in real tim
 
 ## Features
 
-- Native recent-activity sensor with structured cat visits, cleaning completions and observed leveling completions (including recorded durations).
+- Native recent-activity sensor with structured cat visits, cleaning completions and observed leveling completions (including recorded durations). Leveling is tracked across MQTT and cloud polling, with a minimum confirmation threshold to reject transient states.
 - Per-cat daily stay duration sensors, derived from cloud visit records.
 
 - Multiple litter boxes per account, discovered dynamically.
