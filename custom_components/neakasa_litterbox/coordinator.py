@@ -198,6 +198,7 @@ def _build_snapshot(
             last_visit_weight=latest.weight if latest is not None else None,
             last_visit_weight_unit=latest.unit if latest is not None else None,
             visits_today=len(todays),
+            stay_today_seconds=_stay_today_seconds(cat_records, today_start),
         )
 
     info: NeakasaDeviceInfo = {
@@ -217,6 +218,16 @@ def _build_snapshot(
         last_visit_at=last_visit_at,
         last_clean_at=last_clean_at,
         cat_stats=cat_stats,
+    )
+
+
+def _stay_today_seconds(records: list[ToiletRecord], today_start: int) -> int:
+    """Sum completed visits, counting only their overlap with the local day."""
+    now = int(dt_util.utcnow().timestamp())
+    return sum(
+        max(0, record.end_time - max(record.start_time, today_start))
+        for record in records
+        if record.end_time <= now
     )
 
 
