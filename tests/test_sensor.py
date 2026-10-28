@@ -53,6 +53,7 @@ def _make_snapshot(
                 "last_visit_weight": 4.65,
                 "last_visit_weight_unit": "kg",
                 "visits_today": 3,
+                "stay_today_seconds": 75,
             },
         }
     return NeakasaDeviceSnapshot(
@@ -73,7 +74,7 @@ def _make_snapshot(
 
 async def test_setup_entry_lists_all_sensor_states(hass, setup_integration):
     states = hass.states.async_all("sensor")
-    assert len(states) == 7
+    assert len(states) == 8
 
 
 def test_operating_state_maps_to_option(sample_device, sample_status, sample_cat):
