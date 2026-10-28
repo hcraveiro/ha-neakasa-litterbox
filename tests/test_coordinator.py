@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
@@ -243,3 +244,62 @@ def test_build_snapshot_handles_no_records(sample_device, sample_status, sample_
     assert snap.last_visit_at is None
     assert snap.cat_stats[sample_cat.id]["last_visit_at"] is None
     assert snap.cat_stats[sample_cat.id]["last_visit_weight_unit"] is None
+
+
+def test_build_snapshot_deduplicates_visits_by_record_id(
+    sample_device, sample_status, sample_cat, sample_record
+):
+    from homeassistant.util import dt as dt_util
+
+    start = int(dt_util.start_of_local_day().timestamp()) + 60
+    visit = replace(sample_record, start_time=start, end_time=start + 45)
+    distinct_visit = replace(visit, record_id=visit.record_id + 1)
+
+    snap = _build_snapshot(
+        sample_device,
+        sample_status,
+        [sample_cat],
+        [visit, distinct_visit, replace(visit)],
+    )
+
+    assert snap.visits_today == 2
+    assert snap.cat_stats[sample_cat.id]["visits_today"] == 2
+    assert snap.last_visit_at == start
+
+
+def test_build_snapshot_uses_last_occurrence_of_duplicate_record(
+    sample_device, sample_status, sample_cat, sample_record
+):
+    from neakasa_litterbox_sdk import RecordType
+
+    corrected_visit = replace(sample_record, weight=4.7, unit="lb")
+    clean = replace(
+        sample_record,
+        record_id=2,
+        record_type=RecordType.CLEAN_CYCLE,
+        end_time=sample_record.end_time + 100,
+    )
+    corrected_clean = replace(clean, end_time=clean.end_time + 30)
+
+    snap = _build_snapshot(
+        sample_device,
+        sample_status,
+        [sample_cat],
+        [sample_record, clean, corrected_visit, corrected_clean],
+    )
+
+    assert snap.cat_stats[sample_cat.id]["last_visit_weight"] == 4.7
+    assert snap.cat_stats[sample_cat.id]["last_visit_weight_unit"] == "lb"
+    assert snap.last_clean_at == corrected_clean.end_time
+
+
+def test_build_snapshot_keeps_same_record_id_on_different_devices(
+    sample_device, sample_status, sample_cat, sample_record
+):
+    other_device = replace(sample_device, iot_id="iot-id-2", device_name="dn-2")
+    snapshots = [
+        _build_snapshot(device, sample_status, [sample_cat], [sample_record])
+        for device in (sample_device, other_device)
+    ]
+
+    assert [snap.last_visit_at for snap in snapshots] == [sample_record.start_time] * 2

@@ -175,6 +175,7 @@ def _build_snapshot(
     records: list[ToiletRecord],
 ) -> NeakasaDeviceSnapshot:
     """Aggregate the raw SDK payloads into a snapshot consumed by entities."""
+    records = list({record.record_id: record for record in records}.values())
     visit_records = [r for r in records if r.record_type == RecordType.CAT_VISIT]
     clean_records = [r for r in records if r.record_type == RecordType.CLEAN_CYCLE]
     today_start = int(dt_util.start_of_local_day().timestamp())
