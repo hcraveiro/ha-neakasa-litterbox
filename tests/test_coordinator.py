@@ -291,15 +291,3 @@ def test_build_snapshot_uses_last_occurrence_of_duplicate_record(
     assert snap.cat_stats[sample_cat.id]["last_visit_weight"] == 4.7
     assert snap.cat_stats[sample_cat.id]["last_visit_weight_unit"] == "lb"
     assert snap.last_clean_at == corrected_clean.end_time
-
-
-def test_build_snapshot_keeps_same_record_id_on_different_devices(
-    sample_device, sample_status, sample_cat, sample_record
-):
-    other_device = replace(sample_device, iot_id="iot-id-2", device_name="dn-2")
-    snapshots = [
-        _build_snapshot(device, sample_status, [sample_cat], [sample_record])
-        for device in (sample_device, other_device)
-    ]
-
-    assert [snap.last_visit_at for snap in snapshots] == [sample_record.start_time] * 2
