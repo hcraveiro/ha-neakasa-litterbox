@@ -17,19 +17,21 @@ if TYPE_CHECKING:
     from ..data import NeakasaPayload
 
 
-class NeakasaCatStayTodaySensor(NeakasaCatEntity, SensorEntity):
+class NeakasaCatTimeInBoxTodaySensor(NeakasaCatEntity, SensorEntity):
     """Total recorded visit duration for this cat during the local day."""
 
-    _attr_translation_key = "cat_stay_today"
+    _attr_translation_key = "cat_time_in_box_today"
     _attr_icon = "mdi:timer-outline"
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
+    _attr_suggested_unit_of_measurement = UnitOfTime.MINUTES
+    _attr_suggested_display_precision = 1
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     @property
     def unique_id(self) -> str:
         """Return the stable unique id."""
-        return f"{self.iot_id}_cat_{self.cat_id}_stay_today"
+        return f"{self.iot_id}_cat_{self.cat_id}_time_in_box_today"
 
     @property
     def native_value(self) -> int | None:
@@ -41,4 +43,4 @@ class NeakasaCatStayTodaySensor(NeakasaCatEntity, SensorEntity):
         if device is None:
             return None
         stats = device.cat_stats.get(self.cat_id)
-        return None if stats is None else stats["stay_today_seconds"]
+        return None if stats is None else stats["time_in_box_today_seconds"]

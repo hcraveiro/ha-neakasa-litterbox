@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from homeassistant.core import callback
 
 from .cat_last_visit import NeakasaCatLastVisitSensor
-from .cat_stay_today import NeakasaCatStayTodaySensor
+from .cat_time_in_box_today import NeakasaCatTimeInBoxTodaySensor
 from .cat_visits_today import NeakasaCatVisitsTodaySensor
 from .cat_weight import NeakasaCatWeightSensor
 from .last_visit import NeakasaLastVisitSensor
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "NeakasaCatLastVisitSensor",
-    "NeakasaCatStayTodaySensor",
+    "NeakasaCatTimeInBoxTodaySensor",
     "NeakasaCatVisitsTodaySensor",
     "NeakasaCatWeightSensor",
     "NeakasaLastVisitSensor",
@@ -61,7 +61,7 @@ def _cat_sensors(
         NeakasaCatWeightSensor(coordinator, iot_id, cat_id),
         NeakasaCatLastVisitSensor(coordinator, iot_id, cat_id),
         NeakasaCatVisitsTodaySensor(coordinator, iot_id, cat_id),
-        NeakasaCatStayTodaySensor(coordinator, iot_id, cat_id),
+        NeakasaCatTimeInBoxTodaySensor(coordinator, iot_id, cat_id),
     ]
 
 

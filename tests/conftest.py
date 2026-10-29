@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.util import dt as dt_util
 from neakasa_litterbox_sdk import (
     Cat,
     CatGender,
@@ -159,3 +161,12 @@ async def setup_integration(hass, mock_api_client, enable_custom_integrations):
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return entry
+
+
+@pytest.fixture
+def local_day(freezer, verify_cleanup):
+    timezone = dt_util.get_time_zone("Europe/Lisbon")
+    dt_util.set_default_time_zone(timezone)
+    freezer.move_to(datetime(2026, 10, 24, 12, tzinfo=UTC))
+    yield int(dt_util.start_of_local_day().timestamp())
+    dt_util.set_default_time_zone(UTC)
