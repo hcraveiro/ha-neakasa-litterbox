@@ -48,11 +48,11 @@ Per cat (sub-device of the litter box):
 | `sensor` | Weight | weight measured on the cat's most recent visit; native unit follows Neakasa (`kg`/`lb`) and Home Assistant handles display conversion |
 | `sensor` | Last visit | timestamp |
 | `sensor` | Visits today | count since local midnight |
-| `sensor` | Stay today | total completed visit duration during the local day, in seconds; duration device class and total-increasing state class |
+| `sensor` | Time in box today | total duration of completed visits since local midnight, shown in minutes |
 
-Stay today uses completed cloud visit records and counts only the portion of a
-visit after local midnight. It refreshes with the record data and resets on the
-first update of a new local day. Cats without visits have a value of zero.
+Time in box today counts only the portion of a visit after local midnight. It
+refreshes with the visit records and resets on the first update of a new local
+day. Cats without visits report zero.
 
 ## Removing devices
 

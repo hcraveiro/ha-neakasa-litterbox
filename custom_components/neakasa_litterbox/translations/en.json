@@ -76,7 +76,7 @@
         },
         "sensor": {
             "cat_last_visit": {"name": "Last visit"},
-            "cat_stay_today": {"name": "Stay today"},
+            "cat_time_in_box_today": {"name": "Time in box today"},
             "cat_visits_today": {"name": "Visits today"},
             "cat_weight": {"name": "Weight"},
             "last_visit": {"name": "Last visit"},

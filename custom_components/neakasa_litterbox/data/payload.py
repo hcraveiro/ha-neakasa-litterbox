@@ -28,7 +28,7 @@ class NeakasaCatStats(TypedDict):
     last_visit_weight: float | None
     last_visit_weight_unit: str | None
     visits_today: int
-    stay_today_seconds: int
+    time_in_box_today_seconds: int
 
 
 @dataclass(frozen=True)
