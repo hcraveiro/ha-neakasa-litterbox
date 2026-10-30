@@ -11,11 +11,11 @@
 ### Validation
 - 208 Python tests passed; 97.16% code coverage (prior to beta version bump).
 - Ruff, Mypy, HACS, Hassfest and version checks passed.
-- Companion card compatibility change is in `hcraveiro/neakasa-m1-card` branch `fix/upstream-cat-duration-compat`, with four Node.js tests passed.
+- The integration retains compatibility with the existing stable Neakasa M1 card; no card update is required.
 
 ### Important compatibility note
-- Upstream renamed the native per-cat daily duration entity to `*_time_in_box_today`; this version does not create a duplicate `*_stay_today` entity.
-- To continue displaying today's duration in the Our Cats card without changing the dashboard YAML, update the companion card to the corresponding beta build with upstream sensor auto-discovery.
+- The upstream `*_time_in_box_today` entity remains available, while the legacy `*_stay_today` entity is also preserved with its original unique ID and seconds unit for existing dashboards.
+- Existing Neakasa M1 cards and dashboard YAML need no changes or updates.
 - The `*_recent_activity` entity retains its original unique ID and `events` schema.
 
 ### Known limitations
@@ -28,6 +28,6 @@
 ### Installation and test plan
 1. Back up the existing v1.4.5 integration configuration, and note the last activity event.
 2. Install v1.5.0b1 through the integration's HACS beta channel and restart Home Assistant.
-3. Update the companion Neakasa M1 card to its corresponding compatibility beta before judging daily stay duration.
+3. Keep the currently installed Neakasa M1 card and its YAML unchanged.
 4. Verify cat visits, cleaning entries, leveling duration, recent activity after reload, and retention across a Home Assistant restart.
 5. Report any duplicate leveling events or missing entries with MQTT/cloud timing details.
