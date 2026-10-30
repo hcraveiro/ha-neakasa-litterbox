@@ -279,3 +279,75 @@ async def test_mqtt_leveling_then_poll_idle_records_completion(push_setup, hass)
 
     assert coordinator.leveling_events[device_id] == [1098]
     assert coordinator.leveling_durations[device_id][1098] == 98
+
+
+async def test_restore_leveling_history_prunes_expired_and_orphan_durations(
+    push_setup,
+):
+    from unittest.mock import patch
+
+    push, _, _, coordinator, snap, _ = push_setup
+    device_id = snap.device["iot_id"]
+    with (
+        patch("custom_components.neakasa_litterbox.push.time.time", return_value=1_000_000),
+        patch.object(
+            push._leveling_store,
+            "async_load",
+            new_callable=AsyncMock,
+            return_value={device_id: [1, 999_900, 999_950]},
+        ),
+        patch.object(
+            push._duration_store,
+            "async_load",
+            new_callable=AsyncMock,
+            return_value={
+                device_id: {
+                    "1": 50,
+                    "999900": 32,
+                    "999950": 41,
+                    "999999": 99,
+                }
+            },
+        ),
+    ):
+        await push.async_restore_leveling_events()
+
+    assert coordinator.leveling_events[device_id] == [999_900, 999_950]
+    assert coordinator.leveling_durations[device_id] == {
+        999_900: 32,
+        999_950: 41,
+    }
+    assert push._last_completed[device_id] == 999_950
+
+
+async def test_stale_leveling_replay_after_completion_does_not_duplicate(
+    push_setup, hass
+):
+    from unittest.mock import patch
+
+    push, _, _, coordinator, snap, _ = push_setup
+    device_id = snap.device["iot_id"]
+    with (
+        patch(
+            "custom_components.neakasa_litterbox.push.time.time",
+            side_effect=[1000.0, 1040.0, 1050.0, 1100.0],
+        ),
+        patch.object(push._leveling_store, "async_save", new_callable=AsyncMock),
+        patch.object(push._duration_store, "async_save", new_callable=AsyncMock),
+    ):
+        push._observe_leveling_state(
+            device_id, OperatingState.IDLE, OperatingState.LEVELING
+        )
+        push._observe_leveling_state(
+            device_id, OperatingState.LEVELING, OperatingState.IDLE
+        )
+        push._observe_leveling_state(
+            device_id, OperatingState.IDLE, OperatingState.LEVELING
+        )
+        push._observe_leveling_state(
+            device_id, OperatingState.LEVELING, OperatingState.IDLE
+        )
+        await hass.async_block_till_done()
+
+    assert coordinator.leveling_events[device_id] == [1040]
+    assert coordinator.leveling_durations[device_id] == {1040: 40}
