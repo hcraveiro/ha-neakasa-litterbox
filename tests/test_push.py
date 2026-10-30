@@ -289,7 +289,10 @@ async def test_restore_leveling_history_prunes_expired_and_orphan_durations(
     push, _, _, coordinator, snap, _ = push_setup
     device_id = snap.device["iot_id"]
     with (
-        patch("custom_components.neakasa_litterbox.push.time.time", return_value=1_000_000),
+        patch(
+            "custom_components.neakasa_litterbox.push.time.time",
+            return_value=1_000_000,
+        ),
         patch.object(
             push._leveling_store,
             "async_load",
