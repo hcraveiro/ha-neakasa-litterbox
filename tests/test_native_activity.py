@@ -137,3 +137,34 @@ def test_recent_activity_merges_leveling_and_cleanup_completion(
             == datetime.fromtimestamp(clean.end_time, tz=UTC).isoformat()
         )
         assert sensor.native_value == datetime.fromtimestamp(started + 180, tz=UTC)
+
+
+def test_legacy_stay_sensor_preserves_entity_identity_and_seconds(
+    sample_device, sample_status, sample_cat, monkeypatch
+):
+    from unittest.mock import MagicMock
+
+    from homeassistant.util import dt as dt_util
+
+    from custom_components.neakasa_litterbox.data import NeakasaPayload
+    from custom_components.neakasa_litterbox.sensor.cat_stay_today import (
+        NeakasaCatStayTodaySensor,
+    )
+
+    now = datetime(2026, 10, 22, 12, tzinfo=UTC)
+    monkeypatch.setattr(dt_util, "utcnow", lambda: now)
+    monkeypatch.setattr(
+        dt_util, "start_of_local_day", lambda: datetime(2026, 10, 22, tzinfo=UTC)
+    )
+    start = int(now.timestamp()) - 100
+    record = _record(33, RecordType.CAT_VISIT, sample_cat.id, start, start + 43)
+    snap = _build_snapshot(sample_device, sample_status, [sample_cat], [record])
+    coordinator = MagicMock()
+    coordinator.data = NeakasaPayload(devices={sample_device.iot_id: snap})
+    sensor = NeakasaCatStayTodaySensor(
+        coordinator, sample_device.iot_id, sample_cat.id
+    )
+
+    assert sensor.unique_id == f"{sample_device.iot_id}_cat_{sample_cat.id}_stay_today"
+    assert sensor.native_value == 43
+    assert sensor.native_unit_of_measurement == "s"
