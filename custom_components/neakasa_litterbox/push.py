@@ -292,7 +292,11 @@ class NeakasaPushClient:
                 self._last_completed[device_id] = completed_at
                 previous = self._coordinator.leveling_events.get(device_id, [])
                 self._coordinator.leveling_events[device_id] = [
-                    *[ts for ts in previous if completed_at - ts <= _LEVELING_HISTORY_SECONDS],
+                    *[
+                        ts
+                        for ts in previous
+                        if completed_at - ts <= _LEVELING_HISTORY_SECONDS
+                    ],
                     completed_at,
                 ][-30:]
                 self._coordinator.leveling_durations.setdefault(device_id, {})[
@@ -301,7 +305,9 @@ class NeakasaPushClient:
                 valid_timestamps = set(self._coordinator.leveling_events[device_id])
                 self._coordinator.leveling_durations[device_id] = {
                     timestamp: duration
-                    for timestamp, duration in self._coordinator.leveling_durations[device_id].items()
+                    for timestamp, duration in self._coordinator.leveling_durations[
+                        device_id
+                    ].items()
                     if timestamp in valid_timestamps
                 }
                 self._hass.async_create_task(
