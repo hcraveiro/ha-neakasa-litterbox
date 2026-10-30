@@ -262,7 +262,7 @@ def _build_snapshot(
             sorted(
                 (
                     record
-                    for record in unique_records
+                    for record in records
                     if record.record_type
                     in (RecordType.CAT_VISIT, RecordType.CLEAN_CYCLE)
                 ),
