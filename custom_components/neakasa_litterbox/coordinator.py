@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from collections import defaultdict
 from typing import TYPE_CHECKING
+from collections.abc import Callable
 
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from neakasa_litterbox_sdk import RecordType
+from neakasa_litterbox_sdk import OperatingState, RecordType
 
 from .const import (
     CONF_STATISTICS_LOOKBACK_DAYS,
@@ -59,6 +61,9 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
         scan_interval: timedelta,
     ) -> None:
         """Initialize."""
+        self.leveling_events: dict[str, list[int]] = {}
+        self.leveling_durations: dict[str, dict[int, int]] = {}
+        self.leveling_state_callback: Callable[[str, OperatingState, OperatingState], None] | None = None
         super().__init__(
             hass=hass,
             logger=LOGGER,
@@ -135,9 +140,41 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
                 continue
             except NeakasaApiClientError as exc:
                 raise UpdateFailed(str(exc)) from exc
+            for snap in snapshots:
+                current = (
+                    self.data.devices.get(snap.device["iot_id"])
+                    if self.data is not None
+                    else None
+                )
+                if current is not None:
+                    old_state = current.status.operating_state
+                    new_state = snap.status.operating_state
+                    if old_state != new_state:
+                        LOGGER.debug(
+                            "Neakasa cloud poll state for %s: %s -> %s",
+                            snap.device["device_name"],
+                            old_state,
+                            new_state,
+                        )
+                    if self.leveling_state_callback is not None:
+                        self.leveling_state_callback(
+                            snap.device["iot_id"], old_state, new_state
+                        )
             return NeakasaPayload(
-                devices={snap.device["iot_id"]: snap for snap in snapshots},
+                devices={
+                    snap.device["iot_id"]: dataclasses.replace(
+                        snap,
+                        leveling_events=tuple(
+                            self.leveling_events.get(snap.device["iot_id"], [])
+                        ),
+                        leveling_durations=self.leveling_durations.get(
+                            snap.device["iot_id"], {}
+                        ),
+                    )
+                    for snap in snapshots
+                },
             )
+
 
     async def _async_sign_in_again(self) -> None:
         """Re-establish the cloud session with the credentials on the entry."""
@@ -221,6 +258,18 @@ def _build_snapshot(
         last_visit_at=last_visit_at,
         last_clean_at=last_clean_at,
         cat_stats=cat_stats,
+        recent_records=tuple(
+            sorted(
+                (
+                    record
+                    for record in unique_records
+                    if record.record_type
+                    in (RecordType.CAT_VISIT, RecordType.CLEAN_CYCLE)
+                ),
+                key=lambda record: (record.start_time, record.record_id),
+                reverse=True,
+            )[:30]
+        ),
     )
 
 
