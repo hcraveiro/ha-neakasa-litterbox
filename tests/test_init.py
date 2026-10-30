@@ -25,7 +25,7 @@ async def test_setup_entry_loads_successfully(setup_integration):
 
 
 async def test_setup_entry_creates_device_entities(hass, setup_integration):
-    assert len(hass.states.async_all("sensor")) == 8
+    assert len(hass.states.async_all("sensor")) == 10
 
 
 async def test_setup_entry_links_cat_device_to_litter_box(
