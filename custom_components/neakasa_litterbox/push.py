@@ -33,6 +33,8 @@ _HEALTH_CHECK_INTERVAL_SECONDS = 15.0
 # A connection that survives this long resets the reconnect backoff.
 _STABLE_UPTIME_SECONDS = 60.0
 _MIN_CONFIRMED_LEVELING_SECONDS = 15
+_LEVELING_HISTORY_SECONDS = 7 * 86400
+_LEVELING_REPLAY_GUARD_SECONDS = 120
 
 
 class NeakasaPushClient:
@@ -63,6 +65,7 @@ class NeakasaPushClient:
         self._supervisor: asyncio.Task[None] | None = None
         self._stopping: bool = False
         self._leveling_started: dict[str, float] = {}
+        self._last_completed: dict[str, int] = {}
         self._duration_store: Store[dict[str, dict[str, int]]] = Store(
             hass, 1, f"neakasa_litterbox.leveling_durations.{entry.entry_id}"
         )
@@ -76,25 +79,38 @@ class NeakasaPushClient:
         if not isinstance(saved, dict):
             saved = {}
         durations = await self._duration_store.async_load()
+        now = int(time.time())
         if isinstance(durations, dict):
             self._coordinator.leveling_durations = {
                 str(device_id): {
-                    int(timestamp): int(seconds)
+                    int(timestamp): seconds
                     for timestamp, seconds in values.items()
-                    if str(timestamp).isdigit() and isinstance(seconds, int)
+                    if str(timestamp).isdigit()
+                    and isinstance(seconds, int)
+                    and seconds > 0
+                    and now - _LEVELING_HISTORY_SECONDS <= int(timestamp) <= now
                 }
                 for device_id, values in durations.items()
                 if isinstance(values, dict)
             }
-        now = int(time.time())
         for device_id, timestamps in saved.items():
             if isinstance(timestamps, list):
-                self._coordinator.leveling_events[str(device_id)] = [
+                valid = [
                     timestamp
                     for timestamp in timestamps
                     if isinstance(timestamp, int)
-                    and now - 7 * 86400 <= timestamp <= now
+                    and now - _LEVELING_HISTORY_SECONDS <= timestamp <= now
                 ][-30:]
+                self._coordinator.leveling_events[str(device_id)] = valid
+                self._coordinator.leveling_durations[str(device_id)] = {
+                    timestamp: seconds
+                    for timestamp, seconds in self._coordinator.leveling_durations.get(
+                        str(device_id), {}
+                    ).items()
+                    if timestamp in valid
+                }
+                if valid:
+                    self._last_completed[str(device_id)] = valid[-1]
 
     async def async_start(self) -> None:
         """Open the MQTT stream and start the reconnect supervisor."""
@@ -260,7 +276,9 @@ class NeakasaPushClient:
         """Record confirmed leveling transitions from MQTT or cloud polling."""
         now = time.time()
         if new_operating == OperatingState.LEVELING:
-            self._leveling_started.setdefault(device_id, now)
+            last = self._last_completed.get(device_id, 0)
+            if now - last >= _LEVELING_REPLAY_GUARD_SECONDS:
+                self._leveling_started.setdefault(device_id, now)
         elif old_operating == OperatingState.LEVELING:
             started = self._leveling_started.pop(device_id, None)
             elapsed = now - started if started is not None else 0
@@ -271,14 +289,21 @@ class NeakasaPushClient:
                 and new_operating == OperatingState.IDLE
             ):
                 completed_at = int(now)
+                self._last_completed[device_id] = completed_at
                 previous = self._coordinator.leveling_events.get(device_id, [])
                 self._coordinator.leveling_events[device_id] = [
-                    *[ts for ts in previous if completed_at - ts <= 7 * 86400],
+                    *[ts for ts in previous if completed_at - ts <= _LEVELING_HISTORY_SECONDS],
                     completed_at,
                 ][-30:]
                 self._coordinator.leveling_durations.setdefault(device_id, {})[
                     completed_at
                 ] = round(elapsed)
+                valid_timestamps = set(self._coordinator.leveling_events[device_id])
+                self._coordinator.leveling_durations[device_id] = {
+                    timestamp: duration
+                    for timestamp, duration in self._coordinator.leveling_durations[device_id].items()
+                    if timestamp in valid_timestamps
+                }
                 self._hass.async_create_task(
                     self._leveling_store.async_save(self._coordinator.leveling_events)
                 )
