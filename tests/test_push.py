@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from neakasa_litterbox_sdk import NeakasaError, StatusUpdate
+from neakasa_litterbox_sdk import NeakasaError, OperatingState, StatusUpdate
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.neakasa_litterbox.const import DOMAIN
