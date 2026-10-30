@@ -12,6 +12,7 @@ from .cat_visits_today import NeakasaCatVisitsTodaySensor
 from .cat_weight import NeakasaCatWeightSensor
 from .last_visit import NeakasaLastVisitSensor
 from .operating_state import NeakasaOperatingStateSensor
+from .recent_activity import NeakasaRecentActivitySensor
 from .sand_percent import NeakasaSandPercentSensor
 from .visits_today import NeakasaVisitsTodaySensor
 
@@ -33,6 +34,7 @@ __all__ = [
     "NeakasaCatWeightSensor",
     "NeakasaLastVisitSensor",
     "NeakasaOperatingStateSensor",
+    "NeakasaRecentActivitySensor",
     "NeakasaSandPercentSensor",
     "NeakasaVisitsTodaySensor",
 ]
@@ -48,6 +50,7 @@ def _device_sensors(
         NeakasaOperatingStateSensor(coordinator, iot_id),
         NeakasaVisitsTodaySensor(coordinator, iot_id),
         NeakasaLastVisitSensor(coordinator, iot_id),
+        NeakasaRecentActivitySensor(coordinator, iot_id),
     ]
 
 
