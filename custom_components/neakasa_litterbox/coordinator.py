@@ -157,7 +157,6 @@ class NeakasaDataUpdateCoordinator(DataUpdateCoordinator[NeakasaPayload]):
                 },
             )
 
-
     def _observe_polled_states(self, snapshots: list[NeakasaDeviceSnapshot]) -> None:
         """Forward poll state changes to the leveling observer."""
         for snap in snapshots:
