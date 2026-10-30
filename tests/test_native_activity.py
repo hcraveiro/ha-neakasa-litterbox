@@ -161,9 +161,7 @@ def test_legacy_stay_sensor_preserves_entity_identity_and_seconds(
     snap = _build_snapshot(sample_device, sample_status, [sample_cat], [record])
     coordinator = MagicMock()
     coordinator.data = NeakasaPayload(devices={sample_device.iot_id: snap})
-    sensor = NeakasaCatStayTodaySensor(
-        coordinator, sample_device.iot_id, sample_cat.id
-    )
+    sensor = NeakasaCatStayTodaySensor(coordinator, sample_device.iot_id, sample_cat.id)
 
     assert sensor.unique_id == f"{sample_device.iot_id}_cat_{sample_cat.id}_stay_today"
     assert sensor.native_value == 43
